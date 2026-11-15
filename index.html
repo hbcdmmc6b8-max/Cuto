@@ -24,7 +24,80 @@ const baseFruits=[
 {name:'Tropical',skin:'#b7a33e',flesh:'#f6c95a',core:'#fff2ae',seed:'#705331',radius:109}
 ];
 function family(name){const n=name.toLowerCase();if(/orange|mandarin|tangerine|clementine|satsuma|kumquat|calamansi|grapefruit|pomelo|yuzu|sudachi|citron|bergamot|ugli|dekopon/.test(n))return 0;if(/watermelon/.test(n))return 1;if(/kiwi/.test(n))return 2;if(/lemon|lime|buddha/.test(n))return 3;if(/apple|pear|quince/.test(n))return 4;if(/berry|currant|cherry|grape|mulberry|lingon|bilberry|aronia/.test(n))return 6;if(/peach|plum|apricot|nectarine|mango/.test(n))return 8;if(/melon|cucumber|kiwano/.test(n))return 9;if(/dragon|pitaya/.test(n))return 10;return 11}
-const fruits=fruitNames.map((name,i)=>{const f={...baseFruits[family(name)],name};if(/green apple|granny smith/.test(name.toLowerCase()))f.skin='#70ad40';if(/golden apple|golden delicious/.test(name.toLowerCase()))f.skin='#e5be4c';if(/blood orange/.test(name.toLowerCase()))f.flesh='#be3455';if(/yellow watermelon/.test(name.toLowerCase()))f.flesh='#f4d64f';if(/blueberry|bilberry/.test(name.toLowerCase()))f.skin='#394d98';if(/coconut/.test(name.toLowerCase())){f.skin='#79563b';f.flesh='#fff9e9'}if(/avocado/.test(name.toLowerCase())){f.skin='#3d653c';f.flesh='#b8d98b'}return f});
+// Named-fruit art direction: distinct botanical skins, flesh, shapes and seeds.
+const fruitLooks=[
+[/wood apple|bael/,['#716446','#b9935c','#e4b46e','#47382a','woody']],
+[/durian/,['#9a9b48','#e8d397','#f5e5af','#78532d','spiky']],
+[/rambutan/,['#d63c3c','#f7e9d5','#fff4df','#66442b','hairy']],
+[/lychee/,['#d86b6b','#f5e6db','#fff3e5','#75422e','bumpy']],
+[/longan/,['#b99761','#f2e2c5','#fff4e2','#523b2e','bumpy']],
+[/mangosteen/,['#602d65','#f8e6f4','#fff5e8','#66412d','segments']],
+[/jackfruit|breadfruit|breadnut/,['#9fae50','#e6c865','#f9e49b','#8c6834','knobbly']],
+[/soursop|cherimoya|atemoya|sugar apple/,['#6c9c59','#fff4e2','#f7efdc','#65402e','scales']],
+[/pineapple/,['#bb9c38','#f4d15b','#ffe69a','#735332','diamond']],
+[/dragon fruit/,['#db3c86','#faf5e9','#fffdf4','#333035','scales']],
+[/starfruit|carambola/,['#e4b93b','#f3d961','#f8e894','#8d6a32','star']],
+[/coconut/,['#70523d','#fff7e8','#ffffff','#6e4b2e','fibrous']],
+[/salak/,['#7d4937','#f5dcb7','#fff0d6','#67442b','scales']],
+[/tamarind/,['#90653f','#a56738','#c5884c','#553723','pod']],
+[/cacao fruit|cupuacu/,['#b78b3d','#eee0ac','#f4e9c8','#6c4533','ribbed']],
+[/monstera fruit/,['#82a44d','#f7e5b2','#fff1ce','#71523d','scales']],
+[/kiwano|horned melon|african cucumber/,['#e3a333','#a5c956','#cde78b','#e5d2a1','horned']],
+[/prickly pear/,['#b65c77','#d96983','#f4a4a4','#7c4a36','spotted']],
+[/pomegranate/,['#ae293a','#c43e50','#e6a1a7','#8a3036','crown']],
+[/passion fruit|granadilla/,['#7a4567','#e6a54c','#f6c979','#2f2830','wrinkled']],
+[/fig/,['#633f66','#dd6d85','#f5a7b0','#b76a4c','teardrop']],
+[/papaya/,['#e2ad35','#ed8c40','#f6af58','#242225','oval']],
+[/avocado/,['#335d38','#b7d77d','#e0eab1','#805439','pear']],
+[/banana|plantain/,['#e8c744','#f5e6ad','#fff3c9','#85663c','banana']],
+[/strawberry/,['#d93446','#ed5c65','#f39d9b','#e9ca8d','heart']],
+[/watermelon/,['#317b46','#ec5367','#f47e87','#30242a','striped']],
+[/cantaloupe|galia melon/,['#b9a76e','#f2a86c','#f8c58d','#ad8d5c','netted']],
+[/honeydew|canary melon|casaba melon|korean melon/,['#c8ce70','#dbeaa6','#f2edb7','#b8a777','striped']],
+[/blueberry|bilberry|huckleberry/,['#3b4d91','#b36c9a','#d6a4b7','#553d5b','bloom']],
+[/blackberry|blackcurrant|aronia/,['#392d52','#a05a83','#d38eac','#624354','cluster']],
+[/raspberry|loganberry|boysenberry|mulberry/,['#a32c50','#df6385','#ed91a7','#6e3443','cluster']],
+[/gooseberry|cape gooseberry|ground cherry/,['#c4ad47','#e4c56d','#f2da91','#8d7843','veined']],
+[/cranberry|lingonberry|redcurrant/,['#b63448','#db5968','#ed9c9d','#713940','bloom']],
+[/grape/,['#65448b','#c9a9d9','#e4caed','#74517a','bloom']],
+[/lemon|citron|yuzu|sudachi/,['#e5c73a','#f4df83','#fff1b2','#f4e5bf','pitted']],
+[/lime|calamansi/,['#5aab42','#b5d86b','#d9ee99','#f4e6c7','pitted']],
+[/grapefruit|pomelo/,['#e7ad57','#ee9a83','#ffd0b1','#fff1d6','pitted']],
+[/orange|mandarin|tangerine|clementine|satsuma|dekopon|bergamot|kumquat/,['#e9922e','#f8b84d','#ffdb8b','#fff0c8','pitted']],
+[/pear/,['#b1ae56','#f2e7ba','#fff1d3','#5e4333','pear']],
+[/quince/,['#d7ba54','#f3e2a5','#f8eac3','#674632','pear']],
+[/persimmon/,['#df813c','#ee9e5c','#f7c185','#8d4d35','lobed']],
+[/mango/,['#dba044','#f4b64c','#ffdc84','#8c5c35','oval']],
+[/peach|nectarine|apricot/,['#e99c67','#f6c994','#ffe0b2','#9b613c','fuzzy']],
+[/plum|damson|greengage|mirabelle/,['#75416e','#e0a777','#f2c89c','#76513c','bloom']],
+[/cherry|acerola/,['#bc2d45','#ed6c72','#f9a5a4','#7e4535','glossy']],
+[/date|jujube/,['#8d5537','#c18a53','#dbac77','#65452f','wrinkled']],
+[/olive/,['#737a3d','#b9aa69','#d9c58e','#64452f','oval']],
+[/apple|crabapple/,['#d94c52','#f4e7b9','#fff0d3','#704c36','apple']]
+];
+function namedFruitLook(name){const n=name.toLowerCase();let match=fruitLooks.find(([rx])=>rx.test(n));let a=match?match[1]:null;
+if(!a){const hue=hashString(n)%360;a=['hsl('+hue+' 42% 47%)','hsl('+((hue+35)%360)+' 48% 70%)','hsl('+((hue+20)%360)+' 45% 82%)','#72513a','bumpy']}
+let [skin,flesh,core,seed,pattern]=a;
+if(/green apple|granny smith/.test(n))skin='#79b64a';
+if(/golden apple|golden delicious/.test(n))skin='#e2c24d';
+if(/pink lady|rose apple|wax apple|malay apple|mountain apple/.test(n))skin='#df6b80';
+if(/yellow dragon/.test(n))skin='#f4cc4d';
+if(/red banana/.test(n))skin='#ad4e4b';
+if(/pink pineapple/.test(n))flesh='#f1a6a7';
+if(/blood orange|cara cara/.test(n))flesh='#cb5565';
+if(/yellow watermelon/.test(n))flesh='#efda66';
+if(/white currant|white sapote/.test(n))skin='#e8dca7';
+if(/red grape/.test(n))skin='#ad4a67';
+if(/green grape/.test(n))skin='#a3bc62';
+if(/black grape/.test(n))skin='#3b315a';
+if(/golden kiwi/.test(n))flesh='#edcd55';
+if(/kiwi/.test(n)){skin='#8c7148';flesh=/golden/.test(n)?'#edcd55':'#8cc64d';core='#e6edb1';pattern='fuzzy'}
+if(/donut peach|flat nectarine/.test(n))pattern='flat';
+if(/buddha.s hand/.test(n))pattern='fingered';
+if(/star apple/.test(n)){skin='#754c80';flesh='#e6d5ed';core='#eee1f3';pattern='starcore'}
+if(/wood apple/.test(n)){skin='#777052';flesh='#a88152';core='#c69c62';pattern='woody'}
+return {skin,flesh,core,seed,pattern}}
+const fruits=fruitNames.map((name,i)=>({...baseFruits[family(name)],...namedFruitLook(name),name}));
 let fruitHistory=[];let fruitVariant=0;
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);plateY=H*.69;if(pieces.length===0)spawn(false)}
 addEventListener('resize',resize);
@@ -59,11 +132,24 @@ function hashString(s){let h=2166136261;for(let i=0;i<s.length;i++){h=Math.imul(
 function seeded(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
 function ellipse(g,x,y,rx,ry,color,rot=0){g.fillStyle=color;g.beginPath();g.ellipse(x,y,rx,ry,rot,0,Math.PI*2);g.fill()}
 function seedShape(g,x,y,rx,ry,rotation,color){ellipse(g,x,y,rx,ry,color,rotation);ellipse(g,x-rx*.25,y-ry*.28,Math.max(.5,rx*.24),Math.max(.6,ry*.28),'#ffffff45',rotation)}
-function fruitShape(f,r){const t=fruitType(f.name),n=f.name.toLowerCase();if(t==='banana')return {rx:r*.59,ry:r*.94};if(t==='strawberry')return {rx:r*.82,ry:r*.96};if(t==='pear'||/pear/.test(n))return {rx:r*.83,ry:r};if(t==='pineapple'||t==='papaya'||t==='avocado')return {rx:r*.79,ry:r};if(t==='grape'||t==='berry')return {rx:r*.92,ry:r*.93};if(t==='citrus'&&/finger lime/.test(n))return {rx:r*.55,ry:r};return {rx:r,ry:r}}
+function fruitShape(f,r){const t=fruitType(f.name),n=f.name.toLowerCase(),p=f.pattern;if(p==='flat')return {rx:r,ry:r*.52};if(p==='banana'||p==='pod'||p==='fingered')return {rx:r*.53,ry:r};if(p==='heart')return {rx:r*.83,ry:r*.96};if(p==='pear'||/pear/.test(n))return {rx:r*.8,ry:r};if(p==='oval'||p==='ribbed'||p==='diamond'||p==='spiky'||p==='knobbly')return {rx:r*.81,ry:r};if(p==='teardrop')return {rx:r*.77,ry:r};if(p==='star')return {rx:r*.94,ry:r*.94};if(t==='grape'||t==='berry')return {rx:r*.85,ry:r*.87};if(/finger lime/.test(n))return {rx:r*.5,ry:r};return {rx:r,ry:r}}
 function makeTexture(f,variant=0,whole=false){const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d'),cx=160,cy=160,r=144,n=f.name.toLowerCase(),type=fruitType(f.name),random=seeded(hashString(f.name+':'+variant+':'+(whole?'outer':'inner')));
 g.clearRect(0,0,320,320);const shape=fruitShape(f,r),rx=shape.rx,ry=shape.ry;
 ellipse(g,cx,cy,rx,ry,f.skin);
 if(whole){const grad=g.createRadialGradient(105,99,4,160,160,155);grad.addColorStop(0,'#ffffff22');grad.addColorStop(.35,'#ffffff00');grad.addColorStop(1,'#00000065');g.fillStyle=grad;g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.fill();
+// Fruit-specific peel markings: reproducible, not generic recoloring.
+const pattern=f.pattern;
+if(pattern==='woody'||pattern==='fibrous'||pattern==='wrinkled'||pattern==='netted'||pattern==='scales'||pattern==='knobbly'||pattern==='bumpy'||pattern==='spiky'||pattern==='hairy'||pattern==='diamond'||pattern==='striped'||pattern==='ribbed'||pattern==='pitted'||pattern==='cluster'||pattern==='horned'||pattern==='veined'||pattern==='fuzzy'||pattern==='glossy'||pattern==='bloom'){
+const count=pattern==='pitted'?420:pattern==='woody'||pattern==='fibrous'?170:pattern==='hairy'?180:pattern==='spiky'||pattern==='horned'?75:pattern==='netted'?180:pattern==='scales'||pattern==='diamond'?110:90;
+for(let i=0;i<count;i++){const x=(random()*2-1)*rx,y=(random()*2-1)*ry;if((x/rx)**2+(y/ry)**2>.92)continue;
+g.save();g.translate(cx+x,cy+y);g.rotate(random()*6.28);
+g.strokeStyle=pattern==='netted'?'#f8e4b080':pattern==='woody'?'#342c2255':pattern==='hairy'?'#9e253a':pattern==='spiky'?'#6c6d2d':'#473b3450';
+g.fillStyle=pattern==='pitted'?'#4d3c3022':pattern==='bumpy'||pattern==='knobbly'?'#fff5c145':pattern==='scales'?'#e9b58b45':'#58452a44';
+if(pattern==='woody'||pattern==='fibrous'||pattern==='wrinkled'||pattern==='netted'||pattern==='veined'||pattern==='ribbed'){g.lineWidth=pattern==='netted'?2:1.5;g.beginPath();g.moveTo(-6,-4);g.quadraticCurveTo(1,2,random()*13,7);g.stroke()}
+else if(pattern==='hairy'||pattern==='spiky'||pattern==='horned'){g.lineWidth=pattern==='hairy'?1.8:3;g.beginPath();g.moveTo(0,0);g.lineTo(0,-(pattern==='hairy'?12+random()*19:7+random()*11));g.stroke()}
+else if(pattern==='diamond'||pattern==='scales'){g.beginPath();g.moveTo(0,-9);g.lineTo(8,0);g.lineTo(0,9);g.lineTo(-8,0);g.closePath();g.stroke()}
+else{g.beginPath();g.arc(0,0,pattern==='pitted'?1.4:3+random()*3,0,7);g.fill()}g.restore()}}
+if(pattern==='star'||pattern==='lobed'){g.strokeStyle='#8e692e88';g.lineWidth=5;for(let i=0;i<(pattern==='star'?5:4);i++){const a=i*Math.PI*2/(pattern==='star'?5:4);g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(a)*rx*.9,cy+Math.sin(a)*ry*.9);g.stroke()}}
 if(type==='watermelon'){for(let i=-3;i<=3;i++){g.strokeStyle=i%2?'#173e2a90':'#b6d67d80';g.lineWidth=rand(5,11);g.beginPath();g.moveTo(cx+i*28,cy-ry*.88);g.quadraticCurveTo(cx+i*17,cy,cx+i*28,cy+ry*.88);g.stroke()}}
 if(type==='pineapple'){g.strokeStyle='#6c7e30a0';g.lineWidth=3;for(let k=-8;k<=8;k++){g.beginPath();g.moveTo(cx-rx,cy+k*20-rx);g.lineTo(cx+rx,cy+k*20+rx);g.stroke();g.beginPath();g.moveTo(cx-rx,cy+k*20+rx);g.lineTo(cx+rx,cy+k*20-rx);g.stroke()}}
 if(type==='strawberry'){for(let i=0;i<90;i++){const x=(random()-.5)*rx*1.8,y=(random()-.5)*ry*1.8;if((x/rx)**2+(y/ry)**2<.9)seedShape(g,cx+x,cy+y,1.8,3,.2,'#ffe6a3')}}
@@ -74,6 +160,8 @@ if(type==='pome'||type==='stone'){ellipse(g,cx,cy-ry*.91,12,5,'#483621');g.strok
 return c}
 ellipse(g,cx,cy,rx-7,ry-7,f.core);ellipse(g,cx,cy,rx-17,ry-17,f.flesh);
 const grad=g.createRadialGradient(105,95,3,160,160,155);grad.addColorStop(0,'#ffffff3d');grad.addColorStop(1,'#00000025');g.fillStyle=grad;g.beginPath();g.ellipse(cx,cy,rx-17,ry-17,0,0,Math.PI*2);g.fill();
+if(f.pattern==='woody'){ellipse(g,cx,cy,rx-23,ry-23,'#9e7545');for(let i=0;i<36;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*100;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,3+random()*2,5+random()*4,a,'#51402b')}}
+if(f.pattern==='segments'||f.pattern==='starcore'){const sections=f.pattern==='starcore'?5:6;for(let i=0;i<sections;i++){const a=i*Math.PI*2/sections;ellipse(g,cx+Math.cos(a)*55,cy+Math.sin(a)*55,31,43,'#fff7e6',a)}}
 if(type==='citrus'){const count=8+Math.floor(random()*5),rot=random()*Math.PI*2;for(let i=0;i<count;i++){const a=rot+i*2*Math.PI/count;g.strokeStyle='#fffbe5bd';g.lineWidth=3;g.beginPath();g.moveTo(cx+Math.cos(a)*10,cy+Math.sin(a)*10);g.lineTo(cx+Math.cos(a)*(rx-20),cy+Math.sin(a)*(ry-20));g.stroke()}ellipse(g,cx,cy,12,12,f.core);const seedCount=/navel|satsuma|clementine|dekopon/.test(n)?0:Math.floor(random()*5);for(let i=0;i<seedCount;i++){const a=random()*Math.PI*2;seedShape(g,cx+Math.cos(a)*rand(24,57),cy+Math.sin(a)*rand(24,57),3,7,a,f.seed)}}
 else if(type==='kiwi'){ellipse(g,cx,cy,36,39,f.core);const count=30+Math.floor(random()*13),offset=random()*Math.PI*2;for(let i=0;i<count;i++){const a=i*Math.PI*2/count+offset,rad=49+random()*10;seedShape(g,cx+Math.cos(a)*rad,cy+Math.sin(a)*rad,2.1,4.4,a,f.seed)}}
 else if(type==='watermelon'){const count=/seedless/.test(n)?0:14+Math.floor(random()*17);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rad=Math.sqrt(random())*98;seedShape(g,cx+Math.cos(a)*rad,cy+Math.sin(a)*rad,3.2,6.2,a,f.seed)}}
