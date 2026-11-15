@@ -260,8 +260,22 @@ function activateBluntPower(){const p=bluntPowerByName[power];if(!p)return false
 
 function strokeHit(a,b,p){const aa=local(a,p),bb=local(b,p);for(let i=0;i<=20;i++){const t=i/20,point={x:aa.x+(bb.x-aa.x)*t,y:aa.y+(bb.y-aa.y)*t};if(pointInsidePoly(point,p.poly))return point}return null}
 function pointInsidePoly(pt,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside}
+function deformFruitSurface(p,point,strength){
+if(!p.poly||p.poly.length<8)return;
+const poly=p.poly,center=centroid(poly);
+let nearest=0,best=Infinity;
+for(let i=0;i<poly.length;i++){const v=poly[i],dist=(v.x-point.x)**2+(v.y-point.y)**2;if(dist<best){best=dist;nearest=i}}
+const n=poly.length,tip=poly[nearest],radius=Math.hypot(tip.x-center.x,tip.y-center.y);
+const depth=Math.min(radius*.17,Math.max(2.5,strength));
+const span=Math.max(2,Math.min(Math.floor(n/9),8));
+for(let j=-span;j<=span;j++){const i=(nearest+j+n)%n,v=poly[i],falloff=(1+Math.cos(Math.PI*Math.abs(j)/(span+1)))*.5;
+const dx=v.x-center.x,dy=v.y-center.y,length=Math.hypot(dx,dy)||1;
+const move=Math.min(depth*falloff,Math.max(0,length-radius*.58));
+v.x-=dx/length*move;v.y-=dy/length*move}
+p.dentCount=(p.dentCount||0)+1;
+}
 function impactMarks(a,b,p,kind){const point=strokeHit(a,b,p);if(!point)return false;p.hitCount=(p.hitCount||0)+1;p.marks=p.marks||[];const threshold=kind==='boss'?2:bluntWeapons[knifeSkin]?.hits||3;
-if(p.hitCount>=threshold){p.marks.push({x:point.x,y:point.y,crack:p.hitCount>=threshold+2,r:Math.min(21,6+p.hitCount*2)});if(p.marks.length>16)p.marks.shift()}
+if(p.hitCount>=threshold){const weapon=bluntWeapons[knifeSkin],force=weapon?Math.min(18,5+(weapon.damage||10)*.22):7;deformFruitSurface(p,point,force);p.marks.push({x:point.x,y:point.y,crack:p.hitCount>=threshold+2,r:Math.min(21,6+p.hitCount*2)});if(p.marks.length>16)p.marks.shift()}
 p.vx+=(b.x-a.x)*.06;p.vy-=Math.min(50,Math.hypot(b.x-a.x,b.y-a.y)*.08);p.wobble=.09;return true}
 function drawImpactMarks(p){if(!p.marks?.length)return;ctx.save();ctx.lineCap='round';for(const m of p.marks){ctx.strokeStyle='#302124a8';ctx.fillStyle='#291c254d';ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(m.x,m.y,m.r,m.r*.65,0,0,Math.PI*2);ctx.fill();ctx.stroke();if(m.crack){for(let k=0;k<3;k++){const a=k*Math.PI*2/3;ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(m.x+Math.cos(a)*m.r*1.5,m.y+Math.sin(a)*m.r*1.5);ctx.stroke()}}}ctx.restore()}
 function drawBluntWeapon(x,y,angle,scale){const w=bluntWeapons[knifeSkin];ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.lineCap='round';ctx.strokeStyle='#76543b';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-60,0);ctx.lineTo(15,0);ctx.stroke();ctx.fillStyle=w.color;ctx.strokeStyle='#ffffff88';ctx.lineWidth=2;ctx.beginPath();if(w.head==='club'){ctx.ellipse(40,0,40,17,-.15,0,Math.PI*2)}else if(w.head==='mace'){ctx.arc(42,0,22,0,Math.PI*2)}else if(w.head==='maul'){ctx.roundRect(8,-26,67,52,9)}else{ctx.roundRect(w.head==='mallet'?4:12,w.head==='mallet'?-27:-19,w.head==='mallet'?66:53,w.head==='mallet'?54:38,7)}ctx.fill();ctx.stroke();ctx.restore()}
@@ -328,6 +342,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'14.7',title:'Real Fruit Deformation',date:'15 Nov 2026',changes:['Blunt impacts now physically deform the fruit polygon instead of only drawing dents','Repeated impacts progressively push the surface inward near the contact point','Weapon strength controls indentation depth while cracks and boss HP behavior remain intact']},
 {version:'14.6',title:'Compact Display Previews',date:'15 Nov 2026',changes:['Reduced shop and powers card spacing and text sizes again','Added Display preview buttons for knives, blunt weapons, plates and powers','Preview overlays show item colors, weapon silhouettes, plate styles and linked-power visual motifs without purchasing or equipping','Previews can be closed without changing saved equipment']},
 {version:'14.5',title:'Compact Shop & Power Filters',date:'15 Nov 2026',changes:['Added A–Z, Z–A, lowest-price and highest-price sorting to shop and powers','Added owner-only, blunt-weapon and sharp-knife category filters in the shop','Added owner-only and blunt-linked power filters in Powers','Redesigned shop and power listings into compact two-column cards for mobile']},
 {version:'14.4',title:'120 Blunt Weapons & Linked Powers',date:'15 Nov 2026',changes:['Added 120 collectible blunt weapons across 12 families and 10 tiers, alongside the original five','Added 120 matching purchasable powers, each tied to its own blunt weapon','Owned linked powers add passive impact effects and can be activated with their matching weapon','Weapon tiers change prices, dent thresholds, boss damage and ability strength','Expanded shop and powers search to include all new items']},
