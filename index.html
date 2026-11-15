@@ -27,7 +27,7 @@ if(['Orange','Lemon','Lime'].includes(f.name)){for(let i=0;i<10;i++){const a=i*M
 else if(f.name==='Kiwi'){g.fillStyle=f.core;g.beginPath();g.ellipse(cx,cy,36,43,0,0,7);g.fill();for(let i=0;i<30;i++){const a=i*2*Math.PI/30;g.fillStyle=f.seed;g.beginPath();g.ellipse(cx+Math.cos(a)*54,cy+Math.sin(a)*54,2.5,5,a,0,7);g.fill()}}
 else {for(let i=0;i<13;i++){const a=i*2*Math.PI/13;const rr=rand(45,105);g.fillStyle=f.seed;g.beginPath();g.ellipse(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,3,5,a,0,7);g.fill()}}
 for(let i=0;i<240;i++){const x=rand(-r,r),y=rand(-r,r);if(x*x+y*y>(r-20)**2)continue;g.fillStyle=i%3?'#ffffff18':'#6d30250c';g.beginPath();g.arc(cx+x,cy+y,rand(.5,2),0,7);g.fill()}return c}
-const textures=fruits.map(makeTexture);
+const textures=[];function getTexture(i){if(!textures[i])textures[i]=makeTexture(fruits[i]);return textures[i]}
 function spawn(advance=true){if(advance)fruitIndex=(fruitIndex+1)%fruits.length;pieces=[];particles=[];trail=[];const r=Math.min(fruits[fruitIndex].radius,W*.30,H*.20);pieces.push({poly:circlePoly(r),x:W/2,y:H*.44,vx:0,vy:0,angle:0,spin:0,scale:r/144,depth:0});}
 function clip(poly,a,b,side){const out=[];const cross=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],dp=cross(p)*side,dq=cross(q)*side;if(dp>=-1e-7)out.push({...p});if((dp<0&&dq>0)||(dp>0&&dq<0)){const t=dp/(dp-dq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}}return out}
 function local(p,body){const dx=p.x-body.x,dy=p.y-body.y,c=Math.cos(-body.angle),s=Math.sin(-body.angle);return {x:dx*c-dy*s,y:dx*s+dy*c}}
@@ -36,16 +36,20 @@ const c1=centroid(left),c2=centroid(right),parent=centroid(p.poly),ang=p.angle,c
 hits++;for(let i=0;i<13;i++)particles.push({x:(a.x+b.x)/2+rand(-20,20),y:(a.y+b.y)/2+rand(-20,20),vx:rand(-130,130),vy:rand(-220,-30),life:rand(.3,.75),size:rand(2,6)})}
 pieces=next;if(hits&&navigator.vibrate)navigator.vibrate(12)}
 function path(poly){ctx.beginPath();ctx.moveTo(poly[0].x,poly[0].y);for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);ctx.closePath()}
-function drawPiece(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);path(p.poly);ctx.save();ctx.clip();const tex=textures[fruitIndex],r=fruits[fruitIndex].radius,off=p.texOffset||{x:0,y:0};ctx.drawImage(tex,-r-off.x,-r-off.y,2*r,2*r);ctx.restore();ctx.strokeStyle='#fff5d470';ctx.lineWidth=1.7;path(p.poly);ctx.stroke();ctx.restore()}
+function drawPiece(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);path(p.poly);ctx.save();ctx.clip();const tex=getTexture(fruitIndex),r=fruits[fruitIndex].radius,off=p.texOffset||{x:0,y:0};ctx.drawImage(tex,-r-off.x,-r-off.y,2*r,2*r);ctx.restore();ctx.strokeStyle='#fff5d470';ctx.lineWidth=1.7;path(p.poly);ctx.stroke();ctx.restore()}
 function drawBackground(){const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#211b36');bg.addColorStop(1,'#47314a');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.fillStyle='#ffffff09';for(let i=0;i<12;i++){ctx.beginPath();ctx.arc(W*(i%4+.5)/4,H*(Math.floor(i/4)+.4)/3,30+i*7,0,7);ctx.fill()}const pw=Math.min(W*.84,410);ctx.fillStyle='#00000055';ctx.beginPath();ctx.ellipse(W/2,plateY+19,pw*.50,42,0,0,7);ctx.fill();ctx.fillStyle='#cbb6c6';ctx.beginPath();ctx.ellipse(W/2,plateY,pw*.50,48,0,0,7);ctx.fill();ctx.fillStyle='#f6e9e1';ctx.beginPath();ctx.ellipse(W/2,plateY-5,pw*.45,37,0,0,7);ctx.fill();ctx.strokeStyle='#d8c6d0';ctx.lineWidth=4;ctx.stroke()}
 function render(){drawBackground();for(const p of pieces)drawPiece(p);for(const p of particles){ctx.globalAlpha=clamp(p.life*2,0,1);ctx.fillStyle=fruits[fruitIndex].flesh;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill()}ctx.globalAlpha=1;if(trail.length>1){ctx.lineCap='round';for(let i=1;i<trail.length;i++){ctx.strokeStyle='rgba(255,244,218,'+(i/trail.length*.8)+')';ctx.lineWidth=2+i/trail.length*7;ctx.beginPath();ctx.moveTo(trail[i-1].x,trail[i-1].y);ctx.lineTo(trail[i].x,trail[i].y);ctx.stroke()}}}
 function update(dt){for(const p of pieces){p.vy+=850*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.angle+=p.spin*dt;p.vx*=Math.exp(-1.3*dt);p.spin*=Math.exp(-1.4*dt);const maxR=Math.max(...p.poly.map(v=>Math.hypot(v.x,v.y)));const floor=plateY-25;if(p.y+maxR*.50>floor&&p.vy>0){p.y=floor-maxR*.50;p.vy*=-.23;p.vx*=.78;p.spin*=.65}p.x=clamp(p.x,20,W-20)}for(const p of particles){p.life-=dt;p.vy+=700*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}particles=particles.filter(p=>p.life>0);trail=trail.filter(p=>(p.life-=dt)>0)}
-function frame(t){const dt=Math.min((t-lastTime)/1000||0,.033);lastTime=t;update(dt);render();requestAnimationFrame(frame)}
+function frame(t){try{const dt=Math.min((t-lastTime)/1000||0,.033);lastTime=t;update(dt);render();requestAnimationFrame(frame)}catch(e){showError(e)}}
 function point(e){const rect=canvas.getBoundingClientRect();return {x:e.clientX-rect.left,y:e.clientY-rect.top}}
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer={id:e.pointerId,last:point(e)};trail.push({...pointer.last,life:.18})});
 canvas.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;e.preventDefault();const p=point(e),prev=pointer.last;cut(prev,p);trail.push({...p,life:.18});pointer.last=p});
 function end(e){if(pointer?.id===e.pointerId)pointer=null}
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
 document.querySelector('#next').addEventListener('click',()=>spawn(true));document.querySelector('#reset').addEventListener('click',()=>spawn(false));
-resize();spawn(false);requestAnimationFrame(frame);
+// Initialize independently of the rendering loop so failures are visible.
+function showError(error){const box=document.getElementById('game-error')||document.createElement('pre');box.id='game-error';box.style.cssText='position:fixed;top:30%;left:5%;width:90%;white-space:pre-wrap;background:#5b1b35;color:white;padding:16px;border-radius:12px;z-index:20;font:13px monospace';box.textContent='Cuto rendering error: '+String(error&&error.stack||error);document.body.appendChild(box)}
+window.addEventListener('error',e=>showError(e.error||e.message));
+try{resize();spawn(false);render();requestAnimationFrame(frame)}catch(e){showError(e)}
+
 </script></body></html>
