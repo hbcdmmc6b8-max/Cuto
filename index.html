@@ -203,6 +203,15 @@ for(let i=0;i<plateThemes.length;i++)for(let j=0;j<plateForms.length;j++){const 
 for(const name of Object.keys(platePrices))if(!plateCapacity[name])plateCapacity[name]=name==='Ceramic'?2:name==='Wood'?4:name==='Glass'?7:5;
 for(let i=0;i<ownerKnives.length;i++){const n=ownerKnives[i];knifeSkins[n]=hexHue(190+i*80);knifeDesign[n]={form:i,pattern:5,hue:190+i*80};knifePrices[n]=0}
 for(let i=0;i<ownerPlates.length;i++){const n=ownerPlates[i];plateSkins[n]=[hexHue(i*90,50,20),hexHue(i*90,70,65)];plateDesign[n]={form:3,pattern:6,hue:i*90};plateCapacity[n]=16;platePrices[n]=0}
+const flashStart=Date.parse('2026-11-15T18:31:32.759Z'),flashEnd=Date.parse('2026-11-15T19:31:32.759Z');
+const flashCodes=[
+{code:'CUTO-HOUR-RUSH',cutos:1000,xp:100},
+{code:'CUTO-LEMON-FLASH',cutos:750,xp:150},
+{code:'CUTO-CRITICAL-60',cutos:1250,xp:75},
+{code:'CUTO-SLICE-STORM',cutos:900,xp:200},
+{code:'CUTO-GOLDEN-MINUTE',cutos:1500,xp:100}
+];
+function redeemFlashCode(raw){const code=raw.trim().toUpperCase(),gift=flashCodes.find(g=>g.code===code);if(!gift)return false;if(Date.now()<flashStart){announce('Flash codes are not active yet');return true}if(Date.now()>=flashEnd){announce('This one-hour flash code has expired');return true}save.redeemedCodes=save.redeemedCodes||[];if(save.redeemedCodes.includes(code)){announce('Already redeemed');return true}save.redeemedCodes.push(code);if(!save.ownerMode)save.cutos+=gift.cutos;save.xp=(Number(save.xp)||0)+gift.xp;while(save.xp>=(Number(save.level)||1)*80){save.xp-=save.level*80;save.level++;if(!save.ownerMode)save.cutos+=save.level*10}saveProgress();walletUpdate();announce('Flash reward! +'+gift.cutos+' Cutos, +'+gift.xp+' XP');return true}
 const giftCodes=[
 {code:'CUTO-FROST-26',knife:'Frost Katana',plate:'Frost Platter',cutos:500},
 {code:'CUTO-EMBER-26',knife:'Ember Saber',plate:'Ember Board',cutos:650},
@@ -212,7 +221,7 @@ const giftCodes=[
 ];
 const giftStart=Date.parse('2026-11-15T00:00:00Z'),giftEnd=Date.parse('2026-12-16T00:00:00Z');
 function plateSlots(){return plateCapacity[plateSkin]||2}
-function giveCode(raw){const code=raw.trim().toUpperCase();const gift=giftCodes.find(g=>g.code===code);if(!gift)return false;if(Date.now()<giftStart||Date.now()>=giftEnd){announce('Gift code expired or not active');return true}save.redeemedCodes=save.redeemedCodes||[];if(save.redeemedCodes.includes(code)){announce('Already redeemed');return true}save.redeemedCodes.push(code);save.cutos+=gift.cutos;for(const n of [gift.knife])if(!save.ownedKnives.includes(n))save.ownedKnives.push(n);for(const n of [gift.plate])if(!save.ownedPlates.includes(n))save.ownedPlates.push(n);saveProgress();walletUpdate();announce('Gift redeemed! +'+gift.cutos+' Cutos');return true}
+function giveCode(raw){if(redeemFlashCode(raw))return true;const code=raw.trim().toUpperCase();const gift=giftCodes.find(g=>g.code===code);if(!gift)return false;if(Date.now()<giftStart||Date.now()>=giftEnd){announce('Gift code expired or not active');return true}save.redeemedCodes=save.redeemedCodes||[];if(save.redeemedCodes.includes(code)){announce('Already redeemed');return true}save.redeemedCodes.push(code);save.cutos+=gift.cutos;for(const n of [gift.knife])if(!save.ownedKnives.includes(n))save.ownedKnives.push(n);for(const n of [gift.plate])if(!save.ownedPlates.includes(n))save.ownedPlates.push(n);saveProgress();walletUpdate();announce('Gift redeemed! +'+gift.cutos+' Cutos');return true}
 function drawPlatePattern(pw){const d=plateDesign[plateSkin];if(!d)return;const {form,pattern,hue}=d;ctx.save();ctx.beginPath();ctx.ellipse(W/2,plateY-5,pw*.45,37,0,0,7);ctx.clip();ctx.strokeStyle=hexHue((hue+90)%360,70,78);ctx.lineWidth=1.5;ctx.globalAlpha=.6;
 for(let i=0;i<18;i++){const x=W/2-pw*.5+i*pw/17;ctx.beginPath();if(pattern===0||pattern===3){ctx.moveTo(x,plateY-42);ctx.lineTo(x+(pattern===3?16:0),plateY+38)}else if(pattern===1||pattern===4){ctx.arc(W/2,plateY-5,8+i*5,0,7)}else if(pattern===2){ctx.moveTo(x,plateY-42);ctx.lineTo(x+pw*.15,plateY+38)}else if(pattern===5){ctx.moveTo(x,plateY-5+Math.sin(i*1.8)*22);ctx.lineTo(x+10,plateY-5+Math.cos(i*1.8)*18)}else{ctx.arc(x,plateY-5+Math.sin(i*2)*19,2+(i%3),0,7)}ctx.stroke()}
 ctx.restore()}
@@ -262,6 +271,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'14.2',title:'One-Hour Flash Codes',date:'15 Nov 2026',changes:['Added five single-use flash reward codes that expire exactly one hour after their UTC activation time','Each flash code awards Cutos and player XP','Codes can be entered through Settings → Special Code','Flash code expiry uses device time; server-side enforcement would require a secure backend','Existing monthly gift codes remain unchanged']},
 {version:'14.1',title:'Expansion Visual Polish',date:'15 Nov 2026',changes:['Multi-Fruit mode now draws different fruit varieties together','Plate decorations now visibly render on the serving plate','Critical cuts create celebratory particles','Equipped knife trail colors persist during the after-swipe animation']},
 {version:'14.0',title:'The Expansion Update — Phase One',date:'15 Nov 2026',changes:['Added combo tracking, critical cuts, XP and player levels','Added fruit mastery, achievements, quests and precision challenges','Added fruit boss and multi-fruit game modes','Added knife upgrades, trails, slice effects, backgrounds and plate customization menus','Added loadout presets, inventory search and statistics dashboard','Added local save export/import and performance mode','Added local weekly challenge, shareable friend challenge text and player profile access','Known limitation: weekly global ranking and server-hosted events require new Supabase tables and policies; current weekly scores are local','Expanded physics and slice effects; additional refinement is planned']},
 {version:'13.4',title:'Update & Cache Reliability',date:'15 Nov 2026',changes:['Added Check for Updates to the main menu and changelog','Added a visible update status and one-tap refresh when a newer build is detected','Improved service-worker update handling and cache refresh for installed iPhone web apps','Preserved local game saves when updating']},
