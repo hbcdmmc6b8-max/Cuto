@@ -328,6 +328,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'14.6',title:'Compact Display Previews',date:'15 Nov 2026',changes:['Reduced shop and powers card spacing and text sizes again','Added Display preview buttons for knives, blunt weapons, plates and powers','Preview overlays show item colors, weapon silhouettes, plate styles and linked-power visual motifs without purchasing or equipping','Previews can be closed without changing saved equipment']},
 {version:'14.5',title:'Compact Shop & Power Filters',date:'15 Nov 2026',changes:['Added A–Z, Z–A, lowest-price and highest-price sorting to shop and powers','Added owner-only, blunt-weapon and sharp-knife category filters in the shop','Added owner-only and blunt-linked power filters in Powers','Redesigned shop and power listings into compact two-column cards for mobile']},
 {version:'14.4',title:'120 Blunt Weapons & Linked Powers',date:'15 Nov 2026',changes:['Added 120 collectible blunt weapons across 12 families and 10 tiers, alongside the original five','Added 120 matching purchasable powers, each tied to its own blunt weapon','Owned linked powers add passive impact effects and can be activated with their matching weapon','Weapon tiers change prices, dent thresholds, boss damage and ability strength','Expanded shop and powers search to include all new items']},
 {version:'14.3',title:'Blunt Weapons & Boss Durability',date:'15 Nov 2026',changes:['Added five blunt weapons to the shop: Wooden Mallet, Iron Hammer, Stone Club, Golden Mace and Meteor Maul','Blunt impacts cause dents after weapon-dependent hit thresholds, followed by visible cracks','Blunt weapons damage fruit without immediately slicing it','Boss fruits stay whole while HP remains and break only on the final hit','Boss damage varies by equipped weapon; defeated bosses award 500 Cutos']},
@@ -389,6 +390,40 @@ function eventsMenu(){menu('Weekly Challenges & Events');const week=cutoWeek(),w
 function mainMenu(){menu('CUTO • Main Menu');const hero=document.createElement('div');hero.className='menuHero';hero.innerHTML='<strong>Slice. Earn. Customize.</strong><p>Keep slicing or explore your collection.</p>';content.appendChild(hero);sectionLabel('Play');menuButton('🍎 Fruit Collection',fruitMenu);menuButton('🎮 Game Modes',modesMenu);menuButton('📖 Fruit Encyclopedia',encyclopedia);sectionLabel('Progression');menuButton('🌟 Expansion Hub',expansionMenu);menuButton('⚡ Performance Mode: '+(save.performanceMode?'ON':'OFF'),()=>{save.performanceMode=!save.performanceMode;saveProgress();mainMenu()});menuButton('🛍️ Knife & Plate Shop',shop);menuButton('⚡ Powers',powersMenu);menuButton('🏆 Cut Journal',journal);menuButton('🥇 Leaderboard',leaderboard);menuButton('🎯 Daily Challenge',dailyChallenge);sectionLabel('Preferences');menuButton('⚙️ Settings',()=>{panel.hidden=true;setSettingsOpen(true)});menuButton('📷 Photo Mode',()=>{panel.hidden=true;document.body.classList.add('photo')});sectionLabel('About Cuto');menuButton('↻ Check for Updates',checkCutoUpdates);let seen='';try{seen=localStorage.getItem('cuto-changelog-seen')||''}catch(e){}menuButton('📜 Changelog • v'+cutoReleaseNotes[0].version+(seen===cutoReleaseNotes[0].version?'':' • NEW'),changelogMenu)}
 
 document.querySelector('#mainMenu').addEventListener('click',mainMenu);
+
+function cutoItemPreview(name,type){
+const overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:#0d0a16dc;display:flex;align-items:center;justify-content:center;padding:16px';
+const card=document.createElement('div');card.style.cssText='width:min(100%,390px);padding:14px;border:1px solid #a18bb7;border-radius:18px;background:#261d39;color:white;display:flex;flex-direction:column;gap:9px';
+const title=document.createElement('strong');title.textContent=name;title.style.cssText='font-size:16px;overflow-wrap:anywhere';
+const canvas=document.createElement('canvas');canvas.width=600;canvas.height=330;canvas.style.cssText='width:100%;aspect-ratio:20/11;background:#171426;border-radius:12px';
+const c=canvas.getContext('2d');c.translate(300,160);
+const colors=type==='plate'?(plateSkins[name]||['#777','#ccc']):[knifeSkins[name]||'#ded4ee','#674f83'];
+if(type==='plate'){
+const d=plateDesign[name],form=d?.form??3;
+c.fillStyle='#0008';c.beginPath();c.ellipse(0,25,245,65,0,0,7);c.fill();
+c.fillStyle=colors[0];c.beginPath();if(form===0||form===2)c.roundRect(-235,-65,470,130,28);else c.ellipse(0,0,240,78,0,0,7);c.fill();
+c.fillStyle=colors[1];c.beginPath();if(form===0||form===2)c.roundRect(-212,-49,424,97,23);else c.ellipse(0,0,214,60,0,0,7);c.fill();
+c.strokeStyle='#ffffff8a';c.lineWidth=5;c.stroke();
+if(d){c.save();c.globalAlpha=.45;c.strokeStyle=colors[0];for(let j=-180;j<=180;j+=25){c.beginPath();c.moveTo(j,-35);c.lineTo(j+35,35);c.stroke()}c.restore()}
+}else if(type==='power'){
+const linked=bluntPowerByName[name],owner=ownerPowers.includes(name);const hue=linked?linked.ability*30:owner?40:210;
+for(let i=4;i>=1;i--){c.strokeStyle='hsla('+hue+',90%,'+(45+i*8)+'%,'+(.2+i*.14)+')';c.lineWidth=7-i;c.beginPath();c.arc(0,0,30+i*34,0,7);c.stroke()}
+c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(linked?'BLUNT POWER':owner?'OWNER POWER':'POWER',0,120);
+}else{
+const blunt=bluntWeapons[name];c.rotate(-.22);c.lineCap='round';
+c.strokeStyle=blunt?'#77533a':'#493c55';c.lineWidth=24;c.beginPath();c.moveTo(-220,0);c.lineTo(-60,0);c.stroke();
+c.fillStyle=colors[0];c.strokeStyle='#ffffff99';c.lineWidth=4;c.beginPath();
+if(blunt){if(blunt.head==='club')c.ellipse(65,0,135,35,0,0,7);else if(blunt.head==='mace')c.arc(65,0,65,0,7);else c.roundRect(-65,blunt.head==='maul'?-65:-46,210,blunt.head==='maul'?130:92,14)}
+else{const d=knifeDesign[name],form=d?.form??1;if(form===2)c.roundRect(-58,-45,235,90,8);else{c.moveTo(-55,-20);c.lineTo(160,-20);c.lineTo(235,0);c.lineTo(160,20);c.lineTo(-55,20);c.closePath()}}
+c.fill();c.stroke();
+if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}
+}
+const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Linked weapon: '+bluntPowerByName[name].weapon:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
+const close=document.createElement('button');close.textContent='Close preview';close.onclick=()=>overlay.remove();
+overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
+card.append(title,canvas,info,close);overlay.appendChild(card);document.body.appendChild(overlay);
+}
+
 function shop(){menu('Shop • Browse & Collect');const ownedCount=(save.ownedKnives||[]).length+(save.ownedPlates||[]).length;const totalCount=Object.keys(knifePrices).length+Object.keys(platePrices).length;menuText('Collection: '+ownedCount+'/'+totalCount+' • Balance: '+(save.ownerMode?'∞':save.cutos.toLocaleString())+' Cutos');
 const search=document.createElement('input');search.placeholder='Search knives or plates';search.setAttribute('aria-label','Search shop');content.appendChild(search);
 const filters=document.createElement('div');filters.style.cssText='display:flex;gap:6px;flex-wrap:wrap;width:100%';content.appendChild(filters);
@@ -406,16 +441,16 @@ entries.sort((a,b)=>sort==='priceUp'?a[1]-b[1]:sort==='priceDown'?b[1]-a[1]:sort
 summary.textContent=entries.length+' items shown • '+kind+' collection: '+ownedList.length+'/'+Object.keys(prices).length;
 if(!entries.length){const p=document.createElement('p');p.textContent='No matching items. Try another filter.';results.appendChild(p)}
 for(const [name,price] of entries){const owned=ownedList.includes(name),equipped=(kind==='knife'?knifeSkin:plateSkin)===name,owner=ownerList.includes(name),key=kind+':'+name;
-const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;gap:5px;width:100%;min-width:0;padding:8px;border:1px solid #766087;border-radius:10px;background:#332a46;box-sizing:border-box';
+const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;gap:3px;width:100%;min-width:0;padding:5px;border:1px solid #766087;border-radius:9px;background:#332a46;box-sizing:border-box';
 const heading=document.createElement('div');heading.style.cssText='display:flex;align-items:flex-start;justify-content:space-between;gap:4px;min-width:0';
 const label=document.createElement('div');label.style.cssText='flex:1;min-width:0;overflow-wrap:normal;word-break:normal;line-height:1.4';
-const nameLine=document.createElement('strong');nameLine.textContent=name;nameLine.style.cssText='display:block;font-size:12px;line-height:1.3;overflow-wrap:anywhere';
-const meta=document.createElement('div');meta.style.cssText='font-size:10px;opacity:.8;margin-top:3px';meta.textContent=(kind==='plate'?(plateCapacity[name]||2)+' slots • ':'')+(equipped?'Equipped':owned?'Owned':owner?'Owner exclusive':price.toLocaleString()+' Cutos');
+const nameLine=document.createElement('strong');nameLine.textContent=name;nameLine.style.cssText='display:block;font-size:11px;line-height:1.2;overflow-wrap:anywhere';
+const meta=document.createElement('div');meta.style.cssText='font-size:9px;opacity:.8;margin-top:1px';meta.textContent=(kind==='plate'?(plateCapacity[name]||2)+' slots • ':'')+(equipped?'Equipped':owned?'Owned':owner?'Owner exclusive':price.toLocaleString()+' Cutos');
 label.append(nameLine,meta);
-const item=document.createElement('button');item.style.cssText='display:block;box-sizing:border-box;width:100%;min-width:0;min-height:32px;margin:0;padding:5px 6px;white-space:normal;overflow-wrap:anywhere;word-break:normal;text-align:center;font-size:11px';item.textContent=equipped?'✓ Equipped':owned?'Equip':owner?'Owner only':'Buy for '+price.toLocaleString()+' Cutos';if(equipped){item.classList.add('selected');item.disabled=true}
+const item=document.createElement('button');item.style.cssText='display:block;box-sizing:border-box;width:100%;min-width:0;min-height:27px;margin:0;padding:3px 5px;white-space:normal;overflow-wrap:anywhere;word-break:normal;text-align:center;font-size:11px';item.textContent=equipped?'✓ Equipped':owned?'Equip':owner?'Owner only':'Buy for '+price.toLocaleString()+' Cutos';if(equipped){item.classList.add('selected');item.disabled=true}
 item.onclick=()=>{if(!owned){if(owner&&!save.ownerMode)return;if(!save.ownerMode&&save.cutos<price){announce('Not enough Cutos');return}if(!save.ownerMode)save.cutos-=price;ownedList.push(name)}if(kind==='knife'){knifeSkin=name;localStorage.setItem('cuto-knife',name)}else{plateSkin=name;localStorage.setItem('cuto-plate',name)}saveProgress();walletUpdate();drawShop();announce('Equipped '+name)};
 const star=document.createElement('button');star.textContent=favorites.includes(key)?'★':'☆';star.title='Toggle favorite';star.setAttribute('aria-label','Favorite '+name);star.style.cssText='display:block;box-sizing:border-box;width:28px;height:28px;min-width:28px;flex:0 0 28px;margin:0;padding:0;font-size:17px;line-height:1;white-space:nowrap';star.onclick=()=>{if(favorites.includes(key))favorites=favorites.filter(x=>x!==key);else favorites.push(key);try{localStorage.setItem('cuto-shop-favorites-v1',JSON.stringify(favorites))}catch(e){}drawShop()};
-heading.append(label,star);wrap.append(heading,item);results.appendChild(wrap)}}
+const display=document.createElement('button');display.textContent='👁 Display';display.style.cssText='min-height:26px;padding:3px 5px;font-size:11px';display.onclick=()=>cutoItemPreview(name,kind);heading.append(label,star);wrap.append(heading,display,item);results.appendChild(wrap)}}
 search.oninput=drawShop;drawShop()}
 const powerFamilies=['Time Warp','Fruit Storm','Gravity Well','Mirror Slice','Golden Touch','Frostbite','Fire Trail','Magnet Pull','Precision Beam','Shockwave','Phantom Cut','Bloom Burst'];
 const powerRanks=['Spark','Pulse','Surge','Nova','Vortex','Eclipse','Zenith','Mythic','Omega'];
@@ -464,11 +499,11 @@ return (name+' '+(blunt?bluntPowerByName[name].weapon:'')).toLowerCase().include
 entries.sort((a,b)=>sort==='priceUp'?a[1]-b[1]||a[0].localeCompare(b[0]):sort==='priceDown'?b[1]-a[1]||a[0].localeCompare(b[0]):sort==='reverse'?b[0].localeCompare(a[0]):a[0].localeCompare(b[0]));
 summary.textContent=entries.length+' powers shown';
 for(const [name,price] of entries){const owned=save.ownedPowers.includes(name),equipped=power===name,linked=bluntPowerByName[name],owner=ownerPowers.includes(name);
-const card=document.createElement('div');card.style.cssText='display:flex;flex-direction:column;gap:5px;min-width:0;padding:8px;border:1px solid #766087;border-radius:10px;background:#332a46';
-const title=document.createElement('strong');title.textContent=name;title.style.cssText='font-size:12px;line-height:1.3;overflow-wrap:anywhere';
-const meta=document.createElement('small');meta.style.cssText='font-size:10px;opacity:.8;overflow-wrap:anywhere';meta.textContent=(linked?'Weapon: '+linked.weapon+' • ':'')+(owner?'Owner only':price.toLocaleString()+' Cutos');
-const btn=document.createElement('button');btn.style.cssText='min-height:32px;padding:5px 6px;font-size:11px;white-space:normal;overflow-wrap:anywhere';btn.textContent=equipped?'✓ Equipped':owned?'Equip':owner?'Owner only':'Buy / Equip';btn.disabled=equipped||owner&&!save.ownerMode;
-btn.onclick=()=>{if(!owned){if(owner&&!save.ownerMode)return;if(!save.ownerMode&&save.cutos<price){announce('Not enough Cutos');return}if(!save.ownerMode)save.cutos-=price;save.ownedPowers.push(name)}power=name;saveProgress();walletUpdate();updatePowerButton();refresh()};card.append(title,meta,btn);list.appendChild(card)}}
+const card=document.createElement('div');card.style.cssText='display:flex;flex-direction:column;gap:3px;min-width:0;padding:5px;border:1px solid #766087;border-radius:9px;background:#332a46';
+const title=document.createElement('strong');title.textContent=name;title.style.cssText='font-size:11px;line-height:1.2;overflow-wrap:anywhere';
+const meta=document.createElement('small');meta.style.cssText='font-size:9px;opacity:.8;overflow-wrap:anywhere';meta.textContent=(linked?'Weapon: '+linked.weapon+' • ':'')+(owner?'Owner only':price.toLocaleString()+' Cutos');
+const btn=document.createElement('button');btn.style.cssText='min-height:27px;padding:3px 5px;font-size:11px;white-space:normal;overflow-wrap:anywhere';btn.textContent=equipped?'✓ Equipped':owned?'Equip':owner?'Owner only':'Buy / Equip';btn.disabled=equipped||owner&&!save.ownerMode;
+btn.onclick=()=>{if(!owned){if(owner&&!save.ownerMode)return;if(!save.ownerMode&&save.cutos<price){announce('Not enough Cutos');return}if(!save.ownerMode)save.cutos-=price;save.ownedPowers.push(name)}power=name;saveProgress();walletUpdate();updatePowerButton();refresh()};const display=document.createElement('button');display.textContent='👁 Display';display.style.cssText='min-height:26px;padding:3px 5px;font-size:11px';display.onclick=()=>cutoItemPreview(name,'power');card.append(title,meta,display,btn);list.appendChild(card)}}
 search.oninput=refresh;refresh()}
 function updatePowerButton(){document.querySelector('#activatePower').textContent='Power: '+power}
 function activatePower(){if(activateBluntPower())return;if(activateAdvancedPower())return;if(power==='Slow Motion'){slowTimer=3;announce('SLOW MOTION')}else if(power==='Giant Fruit'){giant=true;spawn(false);announce('GIANT FRUIT')}else if(power==='Multi-Cut'){multiLines=[];announce('Multi-Cut armed • draw 3 lines')}else if(power==='Precision Focus'){announce('Precision guide active')}else announce('Equip a Power first')}
