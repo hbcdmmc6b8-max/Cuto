@@ -25,7 +25,7 @@ const baseFruits=[
 ];
 function family(name){const n=name.toLowerCase();if(/orange|mandarin|tangerine|clementine|satsuma|kumquat|calamansi|grapefruit|pomelo|yuzu|sudachi|citron|bergamot|ugli|dekopon/.test(n))return 0;if(/watermelon/.test(n))return 1;if(/kiwi/.test(n))return 2;if(/lemon|lime|buddha/.test(n))return 3;if(/apple|pear|quince/.test(n))return 4;if(/berry|currant|cherry|grape|mulberry|lingon|bilberry|aronia/.test(n))return 6;if(/peach|plum|apricot|nectarine|mango/.test(n))return 8;if(/melon|cucumber|kiwano/.test(n))return 9;if(/dragon|pitaya/.test(n))return 10;return 11}
 const fruits=fruitNames.map((name,i)=>{const f={...baseFruits[family(name)],name};if(/green apple|granny smith/.test(name.toLowerCase()))f.skin='#70ad40';if(/golden apple|golden delicious/.test(name.toLowerCase()))f.skin='#e5be4c';if(/blood orange/.test(name.toLowerCase()))f.flesh='#be3455';if(/yellow watermelon/.test(name.toLowerCase()))f.flesh='#f4d64f';if(/blueberry|bilberry/.test(name.toLowerCase()))f.skin='#394d98';if(/coconut/.test(name.toLowerCase())){f.skin='#79563b';f.flesh='#fff9e9'}if(/avocado/.test(name.toLowerCase())){f.skin='#3d653c';f.flesh='#b8d98b'}return f});
-let fruitHistory=[];
+let fruitHistory=[];let fruitVariant=0;
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);plateY=H*.69;if(pieces.length===0)spawn(false)}
 addEventListener('resize',resize);
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -33,14 +33,66 @@ function circlePoly(r,n=64){return Array.from({length:n},(_,i)=>{const a=i*2*Mat
 function area(poly){let s=0;for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];s+=a.x*b.y-b.x*a.y}return Math.abs(s)/2}
 function centroid(poly){let x=0,y=0;for(const p of poly){x+=p.x;y+=p.y}return {x:x/poly.length,y:y/poly.length}}
 function bounds(poly){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const p of poly){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y)}return {x0,x1,y0,y1}}
-function makeTexture(f){const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d'),cx=160,cy=160,r=144;g.clearRect(0,0,c.width,c.height);g.beginPath();g.arc(cx,cy,r,0,7);g.fillStyle=f.skin;g.fill();g.beginPath();g.arc(cx,cy,r-9,0,7);g.fillStyle=f.core;g.fill();g.beginPath();g.arc(cx,cy,r-17,0,7);g.fillStyle=f.flesh;g.fill();
-const grad=g.createRadialGradient(108,98,12,160,160,150);grad.addColorStop(0,'#ffffff66');grad.addColorStop(1,'#0000003d');g.fillStyle=grad;g.beginPath();g.arc(cx,cy,r-17,0,7);g.fill();
-if(['Orange','Lemon','Lime'].includes(f.name)){for(let i=0;i<10;i++){const a=i*Math.PI/5;g.strokeStyle='#fff8d0a8';g.lineWidth=3;g.beginPath();g.moveTo(cx+Math.cos(a)*12,cy+Math.sin(a)*12);g.lineTo(cx+Math.cos(a)*(r-18),cy+Math.sin(a)*(r-18));g.stroke()}g.fillStyle=f.core;g.beginPath();g.arc(cx,cy,12,0,7);g.fill()}
-else if(f.name==='Kiwi'){g.fillStyle=f.core;g.beginPath();g.ellipse(cx,cy,36,43,0,0,7);g.fill();for(let i=0;i<30;i++){const a=i*2*Math.PI/30;g.fillStyle=f.seed;g.beginPath();g.ellipse(cx+Math.cos(a)*54,cy+Math.sin(a)*54,2.5,5,a,0,7);g.fill()}}
-else {for(let i=0;i<13;i++){const a=i*2*Math.PI/13;const rr=rand(45,105);g.fillStyle=f.seed;g.beginPath();g.ellipse(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,3,5,a,0,7);g.fill()}}
-for(let i=0;i<240;i++){const x=rand(-r,r),y=rand(-r,r);if(x*x+y*y>(r-20)**2)continue;g.fillStyle=i%3?'#ffffff18':'#6d30250c';g.beginPath();g.arc(cx+x,cy+y,rand(.5,2),0,7);g.fill()}return c}
-const textures=[];function getTexture(i){if(!textures[i])textures[i]=makeTexture(fruits[i]);return textures[i]}
-function spawn(advance=true){pointer=null;effects=[];if(advance){fruitHistory.push(fruitIndex);fruitIndex=Math.floor(Math.random()*fruits.length);if(fruits.length>1&&fruitIndex===fruitHistory[fruitHistory.length-1])fruitIndex=(fruitIndex+1)%fruits.length;}pieces=[];particles=[];trail=[];const r=Math.min(fruits[fruitIndex].radius,W*.30,H*.20);document.querySelector('#fruitName').textContent=fruits[fruitIndex].name+' · '+fruits.length+' fruits';pieces.push({poly:circlePoly(r),x:W/2,y:H*.44,vx:0,vy:0,angle:0,spin:0,scale:r/144,depth:0,whole:true});}
+
+function fruitType(name){const n=name.toLowerCase();
+if(/strawberry/.test(n))return 'strawberry';
+if(/banana|plantain/.test(n))return 'banana';
+if(/coconut/.test(n))return 'coconut';
+if(/avocado/.test(n))return 'avocado';
+if(/pineapple/.test(n))return 'pineapple';
+if(/pomegranate/.test(n))return 'pomegranate';
+if(/dragon fruit/.test(n))return 'dragon';
+if(/passion fruit|granadilla/.test(n))return 'passion';
+if(/papaya/.test(n))return 'papaya';
+if(/fig/.test(n))return 'fig';
+if(/kiwi/.test(n))return 'kiwi';
+if(/watermelon/.test(n))return 'watermelon';
+if(/melon|cucumber|kiwano/.test(n))return 'melon';
+if(/orange|mandarin|tangerine|clementine|satsuma|kumquat|calamansi|grapefruit|pomelo|lemon|lime|yuzu|sudachi|citron|bergamot|ugli|dekopon|buddha/.test(n))return 'citrus';
+if(/apple|pear|quince/.test(n))return 'pome';
+if(/peach|nectarine|apricot|plum|damson|cherry|mango|lychee|longan|rambutan|olive|date|jujube|loquat/.test(n))return 'stone';
+if(/grape/.test(n))return 'grape';
+if(/berry|currant|mulberry|lingon|bilberry|aronia|acerola|jabuticaba/.test(n))return 'berry';
+if(/persimmon|sapote|canistel/.test(n))return 'soft';
+return 'tropical'}
+function hashString(s){let h=2166136261;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),16777619)}return h>>>0}
+function seeded(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
+function ellipse(g,x,y,rx,ry,color,rot=0){g.fillStyle=color;g.beginPath();g.ellipse(x,y,rx,ry,rot,0,Math.PI*2);g.fill()}
+function seedShape(g,x,y,rx,ry,rotation,color){ellipse(g,x,y,rx,ry,color,rotation);ellipse(g,x-rx*.25,y-ry*.28,Math.max(.5,rx*.24),Math.max(.6,ry*.28),'#ffffff45',rotation)}
+function fruitShape(f,r){const t=fruitType(f.name),n=f.name.toLowerCase();if(t==='banana')return {rx:r*.59,ry:r*.94};if(t==='strawberry')return {rx:r*.82,ry:r*.96};if(t==='pear'||/pear/.test(n))return {rx:r*.83,ry:r};if(t==='pineapple'||t==='papaya'||t==='avocado')return {rx:r*.79,ry:r};if(t==='grape'||t==='berry')return {rx:r*.92,ry:r*.93};if(t==='citrus'&&/finger lime/.test(n))return {rx:r*.55,ry:r};return {rx:r,ry:r}}
+function makeTexture(f,variant=0,whole=false){const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d'),cx=160,cy=160,r=144,n=f.name.toLowerCase(),type=fruitType(f.name),random=seeded(hashString(f.name+':'+variant+':'+(whole?'outer':'inner')));
+g.clearRect(0,0,320,320);const shape=fruitShape(f,r),rx=shape.rx,ry=shape.ry;
+ellipse(g,cx,cy,rx,ry,f.skin);
+if(whole){const grad=g.createRadialGradient(105,99,4,160,160,155);grad.addColorStop(0,'#ffffff7a');grad.addColorStop(.35,'#ffffff10');grad.addColorStop(1,'#00000065');g.fillStyle=grad;g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.fill();
+if(type==='watermelon'){for(let i=-3;i<=3;i++){g.strokeStyle=i%2?'#173e2a90':'#b6d67d80';g.lineWidth=rand(5,11);g.beginPath();g.moveTo(cx+i*28,cy-ry*.88);g.quadraticCurveTo(cx+i*17,cy,cx+i*28,cy+ry*.88);g.stroke()}}
+if(type==='pineapple'){g.strokeStyle='#6c7e30a0';g.lineWidth=3;for(let k=-8;k<=8;k++){g.beginPath();g.moveTo(cx-rx,cy+k*20-rx);g.lineTo(cx+rx,cy+k*20+rx);g.stroke();g.beginPath();g.moveTo(cx-rx,cy+k*20+rx);g.lineTo(cx+rx,cy+k*20-rx);g.stroke()}}
+if(type==='strawberry'){for(let i=0;i<90;i++){const x=(random()-.5)*rx*1.8,y=(random()-.5)*ry*1.8;if((x/rx)**2+(y/ry)**2<.9)seedShape(g,cx+x,cy+y,1.8,3,.2,'#ffe6a3')}}
+if(type==='coconut'){for(let i=0;i<95;i++){const x=(random()-.5)*rx*1.9,y=(random()-.5)*ry*1.9;if((x/rx)**2+(y/ry)**2<1){g.strokeStyle='#c3a17866';g.lineWidth=1;g.beginPath();g.moveTo(cx+x,cy+y);g.lineTo(cx+x+random()*8,cy+y+random()*5);g.stroke()}}}
+if(type==='banana'){g.strokeStyle='#ad8e37';g.lineWidth=4;for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(cx+i*rx*.45,cy-ry*.9);g.quadraticCurveTo(cx+i*rx*.25,cy,cx+i*rx*.45,cy+ry*.9);g.stroke()}}
+if(type==='berry'||type==='grape'){ellipse(g,cx-rx*.35,cy-ry*.42,rx*.19,ry*.16,'#ffffff38')}
+if(type==='pome'||type==='stone'){ellipse(g,cx,cy-ry*.91,12,5,'#483621');g.strokeStyle='#5a462e';g.lineWidth=5;g.beginPath();g.moveTo(cx,cy-ry*.9);g.lineTo(cx+5,cy-ry*1.06);g.stroke()}
+return c}
+ellipse(g,cx,cy,rx-7,ry-7,f.core);ellipse(g,cx,cy,rx-17,ry-17,f.flesh);
+const grad=g.createRadialGradient(105,95,3,160,160,155);grad.addColorStop(0,'#ffffff3d');grad.addColorStop(1,'#00000025');g.fillStyle=grad;g.beginPath();g.ellipse(cx,cy,rx-17,ry-17,0,0,Math.PI*2);g.fill();
+if(type==='citrus'){const count=8+Math.floor(random()*5),rot=random()*Math.PI*2;for(let i=0;i<count;i++){const a=rot+i*2*Math.PI/count;g.strokeStyle='#fffbe5bd';g.lineWidth=3;g.beginPath();g.moveTo(cx+Math.cos(a)*10,cy+Math.sin(a)*10);g.lineTo(cx+Math.cos(a)*(rx-20),cy+Math.sin(a)*(ry-20));g.stroke()}ellipse(g,cx,cy,12,12,f.core);const seedCount=/navel|satsuma|clementine|dekopon/.test(n)?0:Math.floor(random()*5);for(let i=0;i<seedCount;i++){const a=random()*Math.PI*2;seedShape(g,cx+Math.cos(a)*rand(24,57),cy+Math.sin(a)*rand(24,57),3,7,a,f.seed)}}
+else if(type==='kiwi'){ellipse(g,cx,cy,36,39,f.core);const count=30+Math.floor(random()*13),offset=random()*Math.PI*2;for(let i=0;i<count;i++){const a=i*Math.PI*2/count+offset,rad=49+random()*10;seedShape(g,cx+Math.cos(a)*rad,cy+Math.sin(a)*rad,2.1,4.4,a,f.seed)}}
+else if(type==='watermelon'){const count=/seedless/.test(n)?0:14+Math.floor(random()*17);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rad=Math.sqrt(random())*98;seedShape(g,cx+Math.cos(a)*rad,cy+Math.sin(a)*rad,3.2,6.2,a,f.seed)}}
+else if(type==='pome'){ellipse(g,cx,cy,30,44,f.core);const count=3+Math.floor(random()*4),offset=random()*Math.PI*2;for(let i=0;i<count;i++){const a=offset+i*Math.PI*2/count;seedShape(g,cx+Math.cos(a)*23,cy+Math.sin(a)*27,4,8,a,f.seed)}}
+else if(type==='stone'||type==='avocado'){ellipse(g,cx,cy,type==='avocado'?44:30,type==='avocado'?52:39,type==='avocado'?'#8b5537':'#9a623a');ellipse(g,cx-8,cy-10,9,13,'#ffffff25')}
+else if(type==='dragon'){for(let i=0;i<105;i++){const a=random()*Math.PI*2,rad=Math.sqrt(random())*110;seedShape(g,cx+Math.cos(a)*rad,cy+Math.sin(a)*rad,1.8,2.8,a,'#302c32')}}
+else if(type==='strawberry'){ellipse(g,cx,cy,32,57,'#f4b4b0')}
+else if(type==='banana'){for(let i=0;i<7;i++)seedShape(g,cx+(random()-.5)*11,cy+(i-3)*17,1.3,2,0,'#9b865b')}
+else if(type==='coconut'){ellipse(g,cx,cy,rx-29,ry-29,'#fff9ef')}
+else if(type==='pineapple'){for(let i=0;i<20;i++){const x=(random()-.5)*115,y=(random()-.5)*160;ellipse(g,cx+x,cy+y,2,3,'#caa14e6b')}}
+else if(type==='pomegranate'||type==='passion'||type==='papaya'||type==='fig'){const count=type==='papaya'?44:95;const radius=type==='papaya'?45:90;for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*radius;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,type==='papaya'?4:3,type==='papaya'?6:4,a,type==='papaya'?'#282326':f.seed)}}
+else if(type==='grape'){const count=/seedless|cotton candy|champagne/.test(n)?0:Math.floor(random()*4);for(let i=0;i<count;i++)seedShape(g,cx+(random()-.5)*38,cy+(random()-.5)*48,4,8,random(),f.seed)}
+else if(type==='melon'){const count=32+Math.floor(random()*20);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*35;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,2.7,6,a,f.seed)}}
+else if(type==='berry'){if(/blueberry|cranberry|gooseberry|currant/.test(n)){const count=12+Math.floor(random()*12);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*65;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.1,2,a,f.seed)}}else{for(let i=0;i<24;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*83;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.5,2,a,f.seed)}}}
+else if(type==='tropical'||type==='soft'){const count=/jackfruit|soursop|cherimoya|sugar apple/.test(n)?25:Math.floor(random()*6);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*76;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,4,7,a,f.seed)}}
+for(let i=0;i<110;i++){const x=(random()-.5)*240,y=(random()-.5)*240;if((x/rx)**2+(y/ry)**2>.85)continue;ellipse(g,cx+x,cy+y,random()*1.5+.3,random()*1.5+.3,i%2?'#ffffff12':'#35201c09')}
+return c}
+const textures=new Map();function getTexture(i,variant=0,whole=false){const key=i+':'+variant+':'+whole;if(!textures.has(key)){if(textures.size>75)textures.clear();textures.set(key,makeTexture(fruits[i],variant,whole))}return textures.get(key)}
+function spawn(advance=true){pointer=null;effects=[];fruitVariant=Math.floor(Math.random()*1000000);if(advance){fruitHistory.push(fruitIndex);fruitIndex=Math.floor(Math.random()*fruits.length);if(fruits.length>1&&fruitIndex===fruitHistory[fruitHistory.length-1])fruitIndex=(fruitIndex+1)%fruits.length;}pieces=[];particles=[];trail=[];const r=Math.min(fruits[fruitIndex].radius,W*.30,H*.20);document.querySelector('#fruitName').textContent=fruits[fruitIndex].name+' · '+fruits.length+' fruits';pieces.push({poly:circlePoly(r),x:W/2,y:H*.44,vx:0,vy:0,angle:0,spin:0,scale:r/144,depth:0,whole:true});}
 function clip(poly,a,b,side){const out=[];const cross=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],dp=cross(p)*side,dq=cross(q)*side;if(dp>=-1e-7)out.push({...p});if((dp<0&&dq>0)||(dp>0&&dq<0)){const t=dp/(dp-dq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}}return out}
 function local(p,body){const dx=p.x-body.x,dy=p.y-body.y,c=Math.cos(-body.angle),s=Math.sin(-body.angle);return {x:dx*c-dy*s,y:dx*s+dy*c}}
 function cut(a,b){const len=Math.hypot(b.x-a.x,b.y-a.y);if(len<10)return;const next=[];let hits=0;for(const p of pieces){if(p.depth>=9||area(p.poly)<100){next.push(p);continue}const aa=local(a,p),bb=local(b,p);const left=clip(p.poly,aa,bb,1),right=clip(p.poly,aa,bb,-1);if(left.length<3||right.length<3||area(left)<70||area(right)<70){next.push(p);continue}
@@ -48,7 +100,7 @@ const c1=centroid(left),c2=centroid(right),parent=centroid(p.poly),ang=p.angle,c
 hits++;for(let i=0;i<13;i++)particles.push({x:(a.x+b.x)/2+rand(-20,20),y:(a.y+b.y)/2+rand(-20,20),vx:rand(-130,130),vy:rand(-220,-30),life:rand(.3,.75),size:rand(2,6)})}
 pieces=next;if(hits&&navigator.vibrate)navigator.vibrate(12)}
 function path(poly){ctx.beginPath();ctx.moveTo(poly[0].x,poly[0].y);for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);ctx.closePath()}
-function drawPiece(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);path(p.poly);ctx.save();ctx.clip();const f=fruits[fruitIndex],r=f.radius,off=p.texOffset||{x:0,y:0};if(p.whole){const skin=ctx.createRadialGradient(-r*.38,-r*.42,2,0,0,r*1.1);skin.addColorStop(0,'#ffffff55');skin.addColorStop(.3,f.skin);skin.addColorStop(1,'#25141b');ctx.fillStyle=skin;ctx.fillRect(-r-off.x,-r-off.y,2*r,2*r);ctx.fillStyle='#ffffff21';for(let i=0;i<75;i++){const xx=Math.sin(i*19.37)*r*.78,yy=Math.cos(i*12.47)*r*.78;ctx.fillRect(xx-1,yy-1,2,2)}}else{const tex=getTexture(fruitIndex);ctx.drawImage(tex,-r-off.x,-r-off.y,2*r,2*r)}ctx.restore();ctx.strokeStyle='#fff5d470';ctx.lineWidth=1.7;path(p.poly);ctx.stroke();ctx.restore()}
+function drawPiece(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);path(p.poly);ctx.save();ctx.clip();const f=fruits[fruitIndex],r=f.radius,off=p.texOffset||{x:0,y:0};const tex=getTexture(fruitIndex,fruitVariant,!!p.whole);ctx.drawImage(tex,-r-off.x,-r-off.y,2*r,2*r);ctx.restore();ctx.strokeStyle=p.whole?'#ffffff24':'#fff5d480';ctx.lineWidth=p.whole?1:1.7;path(p.poly);ctx.stroke();ctx.restore()}
 function drawBackground(){const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,backgrounds[background][0]);bg.addColorStop(1,backgrounds[background][1]);ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.fillStyle='#ffffff09';for(let i=0;i<12;i++){ctx.beginPath();ctx.arc(W*(i%4+.5)/4,H*(Math.floor(i/4)+.4)/3,30+i*7,0,7);ctx.fill()}const pw=Math.min(W*.84,410);ctx.fillStyle='#00000055';ctx.beginPath();ctx.ellipse(W/2,plateY+19,pw*.50,42,0,0,7);ctx.fill();ctx.fillStyle=plateSkins[plateSkin][0];ctx.beginPath();ctx.ellipse(W/2,plateY,pw*.50,48,0,0,7);ctx.fill();ctx.fillStyle=plateSkins[plateSkin][1];ctx.beginPath();ctx.ellipse(W/2,plateY-5,pw*.45,37,0,0,7);ctx.fill();ctx.strokeStyle='#d8c6d0';ctx.lineWidth=4;ctx.stroke()}
 
 /* Cuto v6: procedural knife art and synthesized sound (no external assets). */
