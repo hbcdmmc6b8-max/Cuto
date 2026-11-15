@@ -247,13 +247,13 @@ case 1:piece.wobble=.15;piece.vy-=25*strength;break;
 case 2:piece.marks=piece.marks||[];piece.marks.push({x:point.x,y:point.y,r:5+tier,crack:true});break;
 case 3:piece.hitCount+=tier>=5?1:0;break;
 case 4:piece.vy-=50*strength;break;
-case 5:piece.vx*=.6;piece.vy*=.6;break;
-case 6:piece.wobble=.05*strength;break;
-case 7:piece.vx+=75*strength;break;
+case 5:piece.vx*=.25;piece.vy*=.25;piece.frostTimer=Math.max(piece.frostTimer||0,1+tier*.35);break;
+case 6:piece.burnTimer=Math.max(piece.burnTimer||0,1+tier*.35);piece.wobble=.09;break;
+case 7:piece.vx+=75*strength;piece.vy-=40*strength;for(let j=0;j<Math.min(tier,6);j++)effects.push({x:piece.x+rand(-30,30),y:piece.y+rand(-30,30),vx:rand(-90,90),vy:rand(-90,90),life:.35,max:.35,r:2});break;
 case 8:piece.spin+=.5*strength;break;
 case 9:piece.vx+=(W/2-piece.x)*.2*strength;break;
-case 10:for(let k=0;k<Math.min(4,tier);k++)effects.push({x:piece.x+rand(-20,20),y:piece.y+rand(-20,20),vx:rand(-80,80),vy:rand(-80,0),life:.35,max:.35,r:2+k});break;
-case 11:piece.hitCount+=tier>=7?2:1;break;
+case 10:piece.precisionGlow=1+tier*.2;for(let k=0;k<Math.min(4,tier);k++)effects.push({x:piece.x+rand(-20,20),y:piece.y+rand(-20,20),vx:rand(-80,80),vy:rand(-80,0),life:.35,max:.35,r:2+k});break;
+case 11:piece.hitCount+=tier>=7?2:1;piece.wobble=.18;piece.vy-=30*strength;break;
 }
 }
 function activateBluntPower(){const p=bluntPowerByName[power];if(!p)return false;if(knifeSkin!==p.weapon){announce('Equip '+p.weapon+' to use this linked power');return true}let affected=0;for(const piece of pieces){const pt={x:0,y:0};bluntPowerEffect(piece,p.ability,p.tier,pt);piece.hitCount=(piece.hitCount||0)+Math.max(1,Math.floor(p.tier/3));affected++}if(mode==='boss'){bossHealth=Math.max(0,bossHealth-Math.max(1,Math.round(p.tier*1.5)));if(bossHealth===0){save.bossWins++;if(!save.ownerMode)save.cutos+=500;mode='classic';giant=false;cut({x:W*.2,y:H*.44},{x:W*.8,y:H*.44});saveProgress();walletUpdate()}}powerVisual=1.5;powerHue=p.ability*30;announce(power+' activated • '+affected+' fruit(s) affected');return true}
@@ -342,6 +342,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'15.1',title:'Textured Previews & Elemental Impacts',date:'15 Nov 2026',changes:['Display previews now show procedural material texture overlays for knives, blunt weapons and plates','Linked Frost powers visibly freeze fruit, Ember powers burn fruit, Thunder powers create sparks and knockback, and Prism powers create glowing impact effects','Expanded active and passive visual feedback for blunt weapon powers']},
 {version:'15.0',title:'Material & Power Visual Overhaul',date:'15 Nov 2026',changes:['Added cached procedural woodgrain, stone veining, brushed metal and glaze materials to equipment','Added textured metallic highlights and bevels to knives and blunt weapon heads','Added textured plate surfaces with glossy finish','Frostbite now slows individual fruit motion with icy tint, Fire Trail burns with ember particles, Phantom Cut leaves a ghost tint and Precision Beam adds focus glow','Improved appearance without changing existing equipment ownership or saves']},
 {version:'14.7',title:'Real Fruit Deformation',date:'15 Nov 2026',changes:['Blunt impacts now physically deform the fruit polygon instead of only drawing dents','Repeated impacts progressively push the surface inward near the contact point','Weapon strength controls indentation depth while cracks and boss HP behavior remain intact']},
 {version:'14.6',title:'Compact Display Previews',date:'15 Nov 2026',changes:['Reduced shop and powers card spacing and text sizes again','Added Display preview buttons for knives, blunt weapons, plates and powers','Preview overlays show item colors, weapon silhouettes, plate styles and linked-power visual motifs without purchasing or equipping','Previews can be closed without changing saved equipment']},
@@ -418,7 +419,7 @@ if(type==='plate'){
 const d=plateDesign[name],form=d?.form??3;
 c.fillStyle='#0008';c.beginPath();c.ellipse(0,25,245,65,0,0,7);c.fill();
 c.fillStyle=colors[0];c.beginPath();if(form===0||form===2)c.roundRect(-235,-65,470,130,28);else c.ellipse(0,0,240,78,0,0,7);c.fill();
-c.fillStyle=colors[1];c.beginPath();if(form===0||form===2)c.roundRect(-212,-49,424,97,23);else c.ellipse(0,0,214,60,0,0,7);c.fill();
+c.fillStyle=colors[1];c.beginPath();if(form===0||form===2)c.roundRect(-212,-49,424,97,23);else c.ellipse(0,0,214,60,0,0,7);c.fill();c.save();c.clip();cutoDrawMaterial(c,name,'plate',-235,-70,470,140);c.restore();
 c.strokeStyle='#ffffff8a';c.lineWidth=5;c.stroke();
 if(d){c.save();c.globalAlpha=.45;c.strokeStyle=colors[0];for(let j=-180;j<=180;j+=25){c.beginPath();c.moveTo(j,-35);c.lineTo(j+35,35);c.stroke()}c.restore()}
 }else if(type==='power'){
@@ -431,7 +432,7 @@ c.strokeStyle=blunt?'#77533a':'#493c55';c.lineWidth=24;c.beginPath();c.moveTo(-2
 c.fillStyle=colors[0];c.strokeStyle='#ffffff99';c.lineWidth=4;c.beginPath();
 if(blunt){if(blunt.head==='club')c.ellipse(65,0,135,35,0,0,7);else if(blunt.head==='mace')c.arc(65,0,65,0,7);else c.roundRect(-65,blunt.head==='maul'?-65:-46,210,blunt.head==='maul'?130:92,14)}
 else{const d=knifeDesign[name],form=d?.form??1;if(form===2)c.roundRect(-58,-45,235,90,8);else{c.moveTo(-55,-20);c.lineTo(160,-20);c.lineTo(235,0);c.lineTo(160,20);c.lineTo(-55,20);c.closePath()}}
-c.fill();c.stroke();
+c.save();c.clip();c.fill();cutoDrawMaterial(c,name,'weapon',-65,-70,300,140);const sheen=c.createLinearGradient(0,-60,0,65);sheen.addColorStop(0,'#ffffffa0');sheen.addColorStop(.5,'#ffffff05');sheen.addColorStop(1,'#10102060');c.fillStyle=sheen;c.fillRect(-65,-70,310,140);c.restore();c.stroke();
 if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}
 }
 const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Linked weapon: '+bluntPowerByName[name].weapon:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
