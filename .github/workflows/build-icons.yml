@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - icon.svg
-      - cuto-icon-source.jpeg
+      - 98B3AB27-2D37-4BE6-8495-C8A949F55DAA.png
       - .github/workflows/build-icons.yml
   workflow_dispatch:
 permissions:
@@ -20,8 +20,8 @@ jobs:
           import os, cairosvg
           from PIL import Image
           for filename, size in [('apple-touch-icon.png',180),('icon-192.png',192),('icon-512.png',512)]:
-              if os.path.exists('cuto-icon-source.jpeg'):
-                  with Image.open('cuto-icon-source.jpeg') as source:
+              if os.path.exists('98B3AB27-2D37-4BE6-8495-C8A949F55DAA.png'):
+                  with Image.open('98B3AB27-2D37-4BE6-8495-C8A949F55DAA.png') as source:
                       source.convert('RGB').resize((size,size), Image.Resampling.LANCZOS).save(filename, 'PNG', optimize=True)
               else:
                   cairosvg.svg2png(url='icon.svg',write_to=filename,output_width=size,output_height=size)
