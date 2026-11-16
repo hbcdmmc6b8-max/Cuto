@@ -7,6 +7,7 @@
 'use strict';
 /* CUTO 21.0 REBIRTH: standalone, versioned client save. Legacy v8 data is never loaded. */
 const VERSION='21.0',SAVE_KEY='cuto-rebirth-v21-save',RESET_EPOCH='2026-11-16-rebirth';
+try{for(const key of ['cuto-v8-save','cuto-v7-save','cuto-v6-save','cuto-knife','cuto-plate'])localStorage.removeItem(key)}catch(e){}
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),modal=$('modal'),sheet=$('sheet');
 const FRUITS=[
 {name:'Apple',skin:'#d63d4b',flesh:'#ffe8ad',core:'#f9c27a',juice:'#f6c16c',size:90,tough:.85,shape:'round',seed:5},
