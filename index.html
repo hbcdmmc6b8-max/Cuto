@@ -253,7 +253,6 @@ const name=cutoBluntStyles[style]+' '+cutoBluntEffects[effect];
 bluntPowerByName[name]={effect,style,description:cutoBluntEffects[effect]+' with '+cutoBluntStyles[style].toLowerCase()+' impact behavior'};
 powerPrices[name]=160+effect*35+style*95;
 }
-let cutoBluntFields=[];
 function cutoApplyBluntPower(p,def,origin){
 const e=def.effect,style=def.style,scale=[.55,.85,1.4,.8,1.05,1.1,1.2,.9,1.35,2][style],strength=(75+style*22)*scale;
 const dx=p.x-origin.x,dy=p.y-origin.y,dist=Math.hypot(dx,dy)||1,nx=dx/dist,ny=dy/dist;
@@ -531,7 +530,7 @@ c.fillStyle=colors[1];c.beginPath();if(form===0||form===2)c.roundRect(-212,-49,4
 c.strokeStyle='#ffffff8a';c.lineWidth=5;c.stroke();
 if(d){c.save();c.globalAlpha=.45;c.strokeStyle=colors[0];for(let j=-180;j<=180;j+=25){c.beginPath();c.moveTo(j,-35);c.lineTo(j+35,35);c.stroke()}c.restore()}
 }else if(type==='power'){
-const linked=bluntPowerByName[name],owner=ownerPowers.includes(name);const hue=linked?linked.ability*30:owner?40:210;
+const linked=bluntPowerByName[name],owner=ownerPowers.includes(name);const hue=linked?(linked.effect*17+linked.style*25)%360:owner?40:210;
 for(let i=4;i>=1;i--){c.strokeStyle='hsla('+hue+',90%,'+(45+i*8)+'%,'+(.2+i*.14)+')';c.lineWidth=7-i;c.beginPath();c.arc(0,0,30+i*34,0,7);c.stroke()}
 c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(linked?'BLUNT POWER':owner?'OWNER POWER':'POWER',0,120);
 }else{
@@ -543,7 +542,7 @@ else{const d=knifeDesign[name],form=d?.form??1;if(form===2)c.roundRect(-58,-45,2
 c.save();c.clip();c.fill();cutoDrawMaterial(c,name,'weapon',-65,-70,300,140);const sheen=c.createLinearGradient(0,-60,0,65);sheen.addColorStop(0,'#ffffffa0');sheen.addColorStop(.5,'#ffffff05');sheen.addColorStop(1,'#10102060');c.fillStyle=sheen;c.fillRect(-65,-70,310,140);c.restore();c.stroke();
 if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}}
 }
-const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Linked weapon: '+bluntPowerByName[name].weapon:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
+const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Blunt effect: '+bluntPowerByName[name].description:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
 const close=document.createElement('button');close.textContent='Close preview';close.onclick=()=>overlay.remove();
 overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
 card.append(title,canvas,info,close);overlay.appendChild(card);document.body.appendChild(overlay);
