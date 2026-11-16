@@ -104,6 +104,11 @@ const cutoExtraFruitNames=[...cutoFantasyNames,...cutoColors.flatMap(color=>cuto
 const cutoOriginalFruitNames=new Set(fruitNames);
 for(const name of cutoExtraFruitNames)if(!fruitNames.includes(name))fruitNames.push(name);
 const fruits=fruitNames.map((name,i)=>({...baseFruits[family(name)],...(cutoOriginalFruitNames.has(name)?namedFruitLook(name):cutoSpecialFruitLook(name)),name})).sort((a,b)=>a.name.localeCompare(b.name,'en',{sensitivity:'base'}));
+const cutoNewFruitConcepts=["Celestial","Aether","Stardust","Supernova","Quasar","Pulsar","Nebula Crown","Moonstone","Sunstone","Astral","Ethereal","Spectral","Runic","Arcane","Mystic","Enchanted","Ancient","Primordial","Timeless","Eternal","Infinity","Paradox","Quantum","Hypernova","Radiant","Luminous","Shimmer","Iridescent","Opaline","Chromatic","Holographic","Velvet","Porcelain","Silken","Amberglass","Frostglass","Glacier","Blizzard","Tundra","Wildfire","Inferno","Volcanic","Tempest","Cyclone","Tidal","Abyssal","Deepsea"];
+const cutoNewFruitSuffixes=['Apple','Melon','Berry','Pear','Fruit'];
+const cuto235FruitNames=cutoNewFruitConcepts.flatMap(prefix=>cutoNewFruitSuffixes.map(suffix=>prefix+' '+suffix));
+// Append new fruits AFTER the existing sorted collection: legacy harvest keys use numeric fruit indices.
+for(const name of cuto235FruitNames)if(!fruits.some(f=>f.name===name))fruits.push({...baseFruits[family(name)],...cutoSpecialFruitLook(name),name});
 let fruitHistory=[];let fruitVariant=0;
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);plateY=H*.69;if(pieces.length===0)spawn(false)}
 addEventListener('resize',resize);
@@ -393,6 +398,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'16.5',title:'Ten New Rarities & 235 Fruits',date:'16 Nov 2026',changes:['Expanded the rarity ladder from six to sixteen tiers, adding Divine, Celestial, Astral, Ethereal, Transcendent, Primordial, Omniversal, Infinite, Paradox and Singularity','Added exactly 235 new fruit varieties from 47 themed collections with five fruit forms each','Expanded random roll probabilities and market sale multipliers for the ten new tiers','Preserved old fruit indices so existing saved harvest inventory remains valid','New fruit varieties appear in rolls and can be permanently unlocked for the owned-fruit collection']},
 {version:'16.4',title:'Owned Fruits & Fantasy Collection',date:'16 Nov 2026',changes:['Next Fruit cycles only through fruits unlocked from rolls, never random locked fruits','Fruit Collection lets players choose their unlocked fruits and shows their best rarity','Rolling a fruit unlocks it permanently in local save data','Added more than 500 new fantasy and vividly colored fruit varieties','Added distinctive cloud, star, crystal, heart and flame-inspired fruit outlines','New colored fruit variants use dedicated color palettes and higher rarity still improves sale value']},
 {version:'16.3',title:'Cleaner Slicing Screen',date:'16 Nov 2026',changes:['Removed the large Perfect, Great, Good and Cut popups after slicing','Harvest is still collected automatically without interrupting gameplay','Reduced the size of other brief game notifications so they no longer dominate the screen']},
 {version:'16.2',title:'RNG Economy Consistency',date:'16 Nov 2026',changes:['Fruit Collection now browses fruit names without bypassing random rolls','Previous Fruit keeps a history of rolled fruit selections','Removed direct Cutos payout from cutting combos; harvest is sold at the market instead','Improved free roll flow without affecting existing equipment or save data']},
@@ -584,8 +590,13 @@ search.oninput=refresh;refresh()}
 function updatePowerButton(){document.querySelector('#activatePower').textContent='Power: '+power}
 function activatePower(){if(activateBluntPower())return;if(activateAdvancedPower())return;if(power==='Slow Motion'){slowTimer=3;announce('SLOW MOTION')}else if(power==='Giant Fruit'){giant=true;spawn(false);announce('GIANT FRUIT')}else if(power==='Multi-Cut'){multiLines=[];announce('Multi-Cut armed • draw 3 lines')}else if(power==='Precision Focus'){announce('Precision guide active')}else announce('Equip a Power first')}
 
-const cutoRarities=[{name:'Common',weight:55,mult:1,color:'#c4cbd2'},{name:'Uncommon',weight:27,mult:2.2,color:'#8de6a3'},{name:'Rare',weight:12,mult:5,color:'#7fb8ff'},{name:'Epic',weight:4.5,mult:12,color:'#d7a0ff'},{name:'Legendary',weight:1.3,mult:35,color:'#ffca66'},{name:'Mythic',weight:.2,mult:100,color:'#ff8399'}];
-function cutoFruitTier(i){const name=fruits[i]?.name||'',special=/Golden|Miracle|Dragon|Durian|Mangosteen|Cloudberry|Jabuticaba|Cherimoya|Rambutan|Star|Pink|Black Sapote|Finger Lime/i.test(name);return Math.min(5,Math.floor(i/40)+(special?1:0))}
+const cutoRarities=[{"name":"Common","weight":55,"mult":1,"color":"#c4cbd2"},{"name":"Uncommon","weight":27,"mult":2.2,"color":"#8de6a3"},{"name":"Rare","weight":12,"mult":5,"color":"#7fb8ff"},{"name":"Epic","weight":4.5,"mult":12,"color":"#d7a0ff"},{"name":"Legendary","weight":1.3,"mult":35,"color":"#ffca66"},{"name":"Mythic","weight":0.2,"mult":100,"color":"#ff8399"},{"name":"Divine","weight":0.08,"mult":180,"color":"#ffeeb0"},{"name":"Celestial","weight":0.04,"mult":320,"color":"#a6f5ff"},{"name":"Astral","weight":0.02,"mult":550,"color":"#d8b3ff"},{"name":"Ethereal","weight":0.01,"mult":900,"color":"#b9ffe7"},{"name":"Transcendent","weight":0.005,"mult":1500,"color":"#ffb7ef"},{"name":"Primordial","weight":0.0025,"mult":2500,"color":"#ffc18b"},{"name":"Omniversal","weight":0.0012,"mult":4500,"color":"#c6d4ff"},{"name":"Infinite","weight":0.0006,"mult":8000,"color":"#f6d6ff"},{"name":"Paradox","weight":0.00025,"mult":15000,"color":"#f6f0a1"},{"name":"Singularity","weight":0.0001,"mult":30000,"color":"#ffffff"}];
+function cutoFruitTier(i){
+const name=fruits[i]?.name||'';
+if(cuto235FruitNames.includes(name)){const concept=cutoNewFruitConcepts.findIndex(prefix=>name.startsWith(prefix+' '));return Math.min(15,Math.max(5,5+Math.floor(concept/4)))}
+const special=/Golden|Miracle|Dragon|Durian|Mangosteen|Cloudberry|Jabuticaba|Cherimoya|Rambutan|Star|Pink|Black Sapote|Finger Lime/i.test(name);
+return Math.min(15,Math.floor(i/40)+(special?1:0))
+}
 function cutoRollFruit(){
 const weight=cutoRarities.reduce((n,r)=>n+r.weight,0);let draw=Math.random()*weight,tier=0;
 for(let i=0;i<cutoRarities.length;i++){draw-=cutoRarities[i].weight;if(draw<0){tier=i;break}}
@@ -593,7 +604,7 @@ const candidates=fruits.map((f,i)=>i).filter(i=>Math.abs(cutoFruitTier(i)-tier)<
 const pool=candidates.length?candidates:fruits.map((f,i)=>i);
 return {index:pool[Math.floor(Math.random()*pool.length)],tier};
 }
-function cutoSalePrice(index,tier,quantity=1){const r=cutoRarities[Math.max(0,Math.min(5,tier))];return Math.max(1,Math.round((7+cutoFruitTier(index)*4)*r.mult*quantity))}
+function cutoSalePrice(index,tier,quantity=1){const r=cutoRarities[Math.max(0,Math.min(cutoRarities.length-1,tier))];return Math.max(1,Math.round((7+cutoFruitTier(index)*4)*r.mult*quantity))}
 function cutoInventory(){if(!save.harvestInventory||typeof save.harvestInventory!=='object')save.harvestInventory={};return save.harvestInventory}
 function cutoHarvest(index,tier,quantity){if(!Number.isFinite(quantity)||quantity<=0)return;const inv=cutoInventory(),key=index+':'+tier;inv[key]=(inv[key]||0)+quantity;save.harvestTotal=(save.harvestTotal||0)+quantity;saveProgress()}
 function cutoSellAll(){const inv=cutoInventory();let total=0,amount=0;for(const [key,q] of Object.entries(inv)){const [index,tier]=key.split(':').map(Number);if(!fruits[index]||!Number.isFinite(q)||q<=0)continue;total+=cutoSalePrice(index,tier,q);amount+=q}if(!amount){announce('No harvested fruit to sell');return}if(!save.ownerMode)save.cutos+=total;save.harvestInventory={};saveProgress();walletUpdate();announce('Sold '+amount+' fruit portions • +'+total+' Cutos')}
