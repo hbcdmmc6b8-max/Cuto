@@ -193,7 +193,7 @@ Object.assign(plateSkins,{Wood:['#885a35','#c59660'],Glass:['#618c9b','#c0eaf2']
 
 // Cuto v9: generated collectible cosmetics with individual combinations of silhouette, materials and pattern.
 const knifeThemes=['Frost','Ember','Thunder','Moon','Jade','Void','Coral','Nebula','Sunrise','Glacier','Ruby','Mint','Storm','Amber','Sapphire','Orchid','Comet','Copper','Ivory','Midnight','Aurora','Cobalt','Prism','Lava','Petal','Shadow','Quartz','Dusk','Tidal','Starlight'];
-const knifeForms=['Katana','Dagger','Cleaver','Saber'];
+const knifeForms=['Katana','Dagger','Cleaver','Saber','Kukri','Tanto','Scimitar','Bowie','Karambit','Rapier','Machete','Kris','Falchion','Butterfly Knife','Hook Blade','Gladius'];
 const plateThemes=['Maple','Onyx','Pearl','Lagoon','Sunset','Galaxy','Moss','Copper','Frost','Blossom','Quartz','Velvet','Cloud','Royal','Ember','Ocean','Bamboo','Lunar','Dawn','Rose','Citrus','Sky','Ink','Coral','Violet','Amber','Cobalt','Sand','Mint','Star'];
 const plateForms=['Tray','Platter','Board','Dish'];
 const plateCapacity={};const knifeDesign={};const plateDesign={};const ownerKnives=['Owner • Celestial Divide','Owner • Infinity Edge','Owner • Pixel Sovereign'];const ownerPlates=['Owner • Infinite Table','Owner • Royal Workshop','Owner • Starforge'];
@@ -342,6 +342,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'15.2',title:'16 Distinct Knife Silhouettes',date:'16 Nov 2026',changes:['Expanded the collectible knife collection from four generated shapes to sixteen distinct blade families','Added kukri, tanto, scimitar, bowie, karambit, rapier, machete, kris, falchion, butterfly knife, hook blade and gladius designs','Different knife families now have their own blade outlines, handle proportions and guards','Shop Display now uses the same sharp-weapon renderer as gameplay rather than a generic blade placeholder','Preserved existing named knives, prices and ownership']},
 {version:'15.1',title:'Textured Previews & Elemental Impacts',date:'15 Nov 2026',changes:['Display previews now show procedural material texture overlays for knives, blunt weapons and plates','Linked Frost powers visibly freeze fruit, Ember powers burn fruit, Thunder powers create sparks and knockback, and Prism powers create glowing impact effects','Expanded active and passive visual feedback for blunt weapon powers']},
 {version:'15.0',title:'Material & Power Visual Overhaul',date:'15 Nov 2026',changes:['Added cached procedural woodgrain, stone veining, brushed metal and glaze materials to equipment','Added textured metallic highlights and bevels to knives and blunt weapon heads','Added textured plate surfaces with glossy finish','Frostbite now slows individual fruit motion with icy tint, Fire Trail burns with ember particles, Phantom Cut leaves a ghost tint and Precision Beam adds focus glow','Improved appearance without changing existing equipment ownership or saves']},
 {version:'14.7',title:'Real Fruit Deformation',date:'15 Nov 2026',changes:['Blunt impacts now physically deform the fruit polygon instead of only drawing dents','Repeated impacts progressively push the surface inward near the contact point','Weapon strength controls indentation depth while cracks and boss HP behavior remain intact']},
@@ -427,13 +428,13 @@ const linked=bluntPowerByName[name],owner=ownerPowers.includes(name);const hue=l
 for(let i=4;i>=1;i--){c.strokeStyle='hsla('+hue+',90%,'+(45+i*8)+'%,'+(.2+i*.14)+')';c.lineWidth=7-i;c.beginPath();c.arc(0,0,30+i*34,0,7);c.stroke()}
 c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(linked?'BLUNT POWER':owner?'OWNER POWER':'POWER',0,120);
 }else{
-const blunt=bluntWeapons[name];c.rotate(-.22);c.lineCap='round';
+if(!bluntWeapons[name]){cutoRenderSharp(c,name,0,0,-.22,2.15)}else{const blunt=bluntWeapons[name];c.rotate(-.22);c.lineCap='round';
 c.strokeStyle=blunt?'#77533a':'#493c55';c.lineWidth=24;c.beginPath();c.moveTo(-220,0);c.lineTo(-60,0);c.stroke();
 c.fillStyle=colors[0];c.strokeStyle='#ffffff99';c.lineWidth=4;c.beginPath();
 if(blunt){if(blunt.head==='club')c.ellipse(65,0,135,35,0,0,7);else if(blunt.head==='mace')c.arc(65,0,65,0,7);else c.roundRect(-65,blunt.head==='maul'?-65:-46,210,blunt.head==='maul'?130:92,14)}
 else{const d=knifeDesign[name],form=d?.form??1;if(form===2)c.roundRect(-58,-45,235,90,8);else{c.moveTo(-55,-20);c.lineTo(160,-20);c.lineTo(235,0);c.lineTo(160,20);c.lineTo(-55,20);c.closePath()}}
 c.save();c.clip();c.fill();cutoDrawMaterial(c,name,'weapon',-65,-70,300,140);const sheen=c.createLinearGradient(0,-60,0,65);sheen.addColorStop(0,'#ffffffa0');sheen.addColorStop(.5,'#ffffff05');sheen.addColorStop(1,'#10102060');c.fillStyle=sheen;c.fillRect(-65,-70,310,140);c.restore();c.stroke();
-if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}
+if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}}
 }
 const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Linked weapon: '+bluntPowerByName[name].weapon:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
 const close=document.createElement('button');close.textContent='Close preview';close.onclick=()=>overlay.remove();
@@ -602,14 +603,49 @@ for(let i=0;i<900;i++){const x=rnd()*256,y=rnd()*256;g.fillStyle=rnd()>.5?'#ffff
 cutoMaterialCache.set(key,el);return el}
 function cutoDrawMaterial(ctx2,name,type,x,y,w,h){ctx2.save();ctx2.globalAlpha=.48;ctx2.drawImage(cutoMaterial(name,type),x,y,w,h);ctx2.restore()}
 
-function drawKnife(x,y,angle,scale=1){if(bluntWeapons[knifeSkin])return drawBluntWeapon(x,y,angle,scale);const d=knifeDesign[knifeSkin],k=knifeProfiles[knifeSkin]||{handle:hexHue(d?.hue||0,40,24),guard:hexHue(d?.hue||0,75,60),blade:hexHue(d?.hue||0,38,87),style:1};const form=d?d.form:knifeSkin==='Katana'?0:knifeSkin==='Chef Knife'?2:knifeSkin==='Crystal'?1:3;ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.shadowColor=knifeSkins[knifeSkin];ctx.shadowBlur=9;
-ctx.fillStyle=k.handle;ctx.beginPath();if(form===0){ctx.moveTo(-69,-7);ctx.lineTo(-22,-7);ctx.lineTo(-22,7);ctx.lineTo(-69,7)}else if(form===1){ctx.moveTo(-59,-10);ctx.lineTo(-19,-8);ctx.lineTo(-19,8);ctx.lineTo(-59,10)}else if(form===2){ctx.moveTo(-70,-11);ctx.lineTo(-25,-11);ctx.lineTo(-25,11);ctx.lineTo(-70,11)}else{ctx.moveTo(-66,-8);ctx.lineTo(-21,-8);ctx.lineTo(-21,8);ctx.lineTo(-66,8)}ctx.closePath();ctx.fill();if(d){ctx.strokeStyle=hexHue(d.hue,65,70);ctx.lineWidth=1.5;for(let i=0;i<d.handleStyle+1;i++){ctx.beginPath();ctx.moveTo(-61+i*7,-7);ctx.lineTo(-56+i*7,7);ctx.stroke()}}
-ctx.strokeStyle=k.guard;ctx.lineWidth=form===0?5:3;ctx.beginPath();ctx.moveTo(-22,-13);ctx.lineTo(-22,13);ctx.stroke();ctx.fillStyle=k.blade;ctx.beginPath();
-if(form===0){/* katana: long narrow blade with curved cutting edge */ctx.moveTo(-18,-6);ctx.quadraticCurveTo(34,-11,78,-16);ctx.quadraticCurveTo(89,-14,98,-9);ctx.quadraticCurveTo(58,5,-18,6)}
-else if(form===1){/* dagger: symmetrical double-edged point */ctx.moveTo(-18,-13);ctx.lineTo(27,-13);ctx.lineTo(83,0);ctx.lineTo(27,13);ctx.lineTo(-18,13)}
-else if(form===2){/* cleaver: broad rectangular blade with a squared tip */ctx.moveTo(-19,-12);ctx.lineTo(60,-14);ctx.lineTo(66,-11);ctx.lineTo(66,25);ctx.quadraticCurveTo(22,28,-19,20)}
-else{/* saber: tapered curved blade */ctx.moveTo(-18,-10);ctx.quadraticCurveTo(30,-17,71,-25);ctx.quadraticCurveTo(85,-26,93,-18);ctx.quadraticCurveTo(54,3,14,9);ctx.lineTo(-18,8)}
-ctx.closePath();ctx.save();ctx.clip();ctx.fill();cutoDrawMaterial(ctx,knifeSkin,'weapon',-22,-28,140,60);const metal=ctx.createLinearGradient(0,-24,0,27);metal.addColorStop(0,'#ffffff9c');metal.addColorStop(.22,'#ffffff10');metal.addColorStop(.52,'#17151a40');metal.addColorStop(.78,'#ffffff6b');metal.addColorStop(1,'#0808127a');ctx.fillStyle=metal;ctx.fillRect(-22,-28,140,60);ctx.restore();if(d){ctx.save();ctx.globalCompositeOperation='destination-out';for(let i=0;i<d.notches;i++){const xx=27+i*10;ctx.beginPath();ctx.arc(xx,form===2?25:form===0?6:9,1.5+(d.variant%3),0,7);ctx.fill()}ctx.restore();ctx.save();ctx.globalAlpha=.65;ctx.strokeStyle=knifeSkins[knifeSkin];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-12,0);ctx.quadraticCurveTo(30,d.curve*4,Math.min(68,d.bladeLength),d.curve*2);ctx.stroke();ctx.restore()}ctx.shadowBlur=0;const shine=ctx.createLinearGradient(0,-22,0,25);shine.addColorStop(0,'#ffffffb5');shine.addColorStop(.5,'#ffffff08');shine.addColorStop(1,knifeSkins[knifeSkin]);ctx.fillStyle=shine;ctx.fill();ctx.strokeStyle=knifeSkins[knifeSkin];ctx.lineWidth=1.4;ctx.stroke();drawKnifePattern();ctx.restore()}
+function cutoBladePath(c,form){
+c.beginPath();
+switch(form){
+case 0:c.moveTo(-18,-7);c.quadraticCurveTo(45,-12,102,-22);c.quadraticCurveTo(85,-6,42,3);c.lineTo(-18,7);break;
+case 1:c.moveTo(-18,-13);c.lineTo(30,-13);c.lineTo(100,0);c.lineTo(30,13);c.lineTo(-18,13);break;
+case 2:c.moveTo(-18,-14);c.lineTo(79,-18);c.lineTo(79,28);c.lineTo(-18,22);break;
+case 3:c.moveTo(-18,-9);c.quadraticCurveTo(60,-22,100,-29);c.quadraticCurveTo(79,-2,30,8);c.lineTo(-18,8);break;
+case 4:c.moveTo(-18,-12);c.quadraticCurveTo(18,-12,40,10);c.quadraticCurveTo(72,27,103,-6);c.quadraticCurveTo(72,41,32,25);c.lineTo(-18,8);break;
+case 5:c.moveTo(-18,-13);c.lineTo(51,-13);c.lineTo(51,-4);c.lineTo(99,0);c.lineTo(51,13);c.lineTo(-18,13);break;
+case 6:c.moveTo(-18,-10);c.quadraticCurveTo(45,-24,84,-45);c.quadraticCurveTo(115,-48,114,-33);c.quadraticCurveTo(57,3,-18,11);break;
+case 7:c.moveTo(-18,-16);c.lineTo(48,-16);c.quadraticCurveTo(92,-14,108,-29);c.quadraticCurveTo(100,-5,75,12);c.lineTo(-18,17);break;
+case 8:c.moveTo(-18,-6);c.quadraticCurveTo(31,-63,75,-25);c.quadraticCurveTo(90,10,35,38);c.quadraticCurveTo(61,8,46,-12);c.quadraticCurveTo(26,-31,-18,8);break;
+case 9:c.moveTo(-18,-4);c.lineTo(133,-5);c.lineTo(160,0);c.lineTo(133,5);c.lineTo(-18,4);break;
+case 10:c.moveTo(-18,-18);c.lineTo(94,-18);c.quadraticCurveTo(111,-11,116,0);c.lineTo(94,19);c.lineTo(-18,18);break;
+case 11:c.moveTo(-18,-10);for(let j=0;j<7;j++)c.lineTo(j*18-10,(j%2?15:-15));c.lineTo(118,0);for(let j=6;j>=0;j--)c.lineTo(j*18-10,(j%2?-15:15));break;
+case 12:c.moveTo(-18,-14);c.lineTo(81,-20);c.lineTo(116,-8);c.lineTo(105,10);c.lineTo(-18,15);break;
+case 13:c.moveTo(-18,-8);c.lineTo(95,-9);c.lineTo(111,0);c.lineTo(95,9);c.lineTo(-18,8);break;
+case 14:c.moveTo(-18,-12);c.lineTo(65,-16);c.quadraticCurveTo(116,-27,117,-55);c.quadraticCurveTo(129,-7,67,10);c.lineTo(-18,12);break;
+default:c.moveTo(-18,-17);c.lineTo(72,-17);c.lineTo(96,0);c.lineTo(72,17);c.lineTo(-18,17);
+}
+c.closePath()}
+function cutoRenderSharp(c,name,x,y,angle,scale){
+const d=knifeDesign[name],form=d?.form??(name==='Katana'?0:name==='Chef Knife'?2:1),hue=d?.hue||200;
+const k=knifeProfiles[name]||{handle:hexHue(hue,40,24),guard:hexHue(hue,65,60),blade:hexHue(hue,25,86)};
+c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);
+c.shadowColor=knifeSkins[name]||'#ffffff';c.shadowBlur=7;
+c.lineCap='round';
+c.fillStyle=k.handle;c.beginPath();
+if(form===8){c.ellipse(-48,2,27,17,-.3,0,7);c.moveTo(-45,-4);c.arc(-48,2,8,0,7,true)}
+else if(form===13){c.roundRect(-80,-10,61,20,5)}
+else if(form===9){c.roundRect(-90,-7,71,14,4)}
+else c.roundRect(-80,-10,62,20,form===0?3:7);
+c.fill('evenodd');
+c.strokeStyle='#ffffff55';c.lineWidth=2;for(let i=0;i<5;i++){c.beginPath();c.moveTo(-73+i*10,-8);c.lineTo(-68+i*10,8);c.stroke()}
+c.shadowBlur=0;
+c.strokeStyle=k.guard;c.lineWidth=form===9?3:6;c.beginPath();c.moveTo(-20,-19);c.lineTo(-20,19);c.stroke();
+if(form===13){c.strokeStyle=k.guard;c.lineWidth=4;c.beginPath();c.moveTo(-77,-11);c.lineTo(-77,11);c.stroke()}
+cutoBladePath(c,form);c.save();c.clip();c.fillStyle=k.blade;c.fill();cutoDrawMaterial(c,name,'weapon',-25,-60,190,120);
+const shine=c.createLinearGradient(0,-50,0,50);shine.addColorStop(0,'#ffffffaa');shine.addColorStop(.38,'#ffffff10');shine.addColorStop(.55,'#10101b60');shine.addColorStop(.85,'#ffffff80');shine.addColorStop(1,'#11122260');c.fillStyle=shine;c.fillRect(-25,-60,200,120);c.restore();
+c.strokeStyle=knifeSkins[name]||'#ddd';c.lineWidth=1.6;cutoBladePath(c,form);c.stroke();
+c.strokeStyle='#ffffff80';c.lineWidth=1;c.beginPath();c.moveTo(-12,0);c.lineTo(form===9?142:form===8?45:78,0);c.stroke();
+c.restore()}
+function drawKnife(x,y,angle,scale=1){if(bluntWeapons[knifeSkin])return drawBluntWeapon(x,y,angle,scale);cutoRenderSharp(ctx,knifeSkin,x,y,angle,scale)}
 function addCutEffects(a,b){const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;for(let i=0;i<(save.performanceMode?7:25);i++){const t=Math.random(),side=Math.random()<.5?-1:1;effects.push({x:a.x+dx*t,y:a.y+dy*t,vx:nx*side*rand(35,150)+rand(-25,25),vy:ny*side*rand(35,150)+rand(-35,35),life:rand(.16,.43),max:.43,r:rand(1.2,3.5)})}if(effects.length>160)effects.splice(0,effects.length-160)}
 function drawKnifeEffects(){ctx.save();ctx.globalCompositeOperation='lighter';for(const e of effects){ctx.globalAlpha=clamp(e.life/e.max,0,1)*.85;ctx.fillStyle=({Sparks:'#ffd65b',Confetti:['#fc6a85','#73dff3','#ffd65b'][Math.floor(e.x)%3],Hearts:'#ff6c9c',Glitter:'#ffffff'})[save.equippedEffect]||knifeSkins[knifeSkin];ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=9;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill()}ctx.restore()}
 
