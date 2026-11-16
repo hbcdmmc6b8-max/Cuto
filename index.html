@@ -239,37 +239,71 @@ const bluntFamilies=[
 ['Oak','Mallet','mallet','Rebound'],['Iron','Hammer','hammer','Shockwave'],['Granite','Club','club','Crater'],['Royal','Mace','mace','Sunder'],['Meteor','Maul','maul','Meteorfall'],['Frost','Hammer','hammer','Freeze'],['Ember','Mace','mace','Scorch'],['Thunder','Maul','maul','Thunderclap'],['Jade','Club','club','Resonance'],['Void','Mallet','mallet','Gravity'],['Prism','Mace','mace','Prismatic Burst'],['Titan','Maul','maul','Titan Strike']
 ];
 const bluntTiers=['Training','Copper','Bronze','Silver','Gold','Crystal','Mythic','Ancient','Celestial','Sovereign'];
-const bluntPowerByName={};
-for(let family=0;family<bluntFamilies.length;family++){
-const [theme,shape,head,ability]=bluntFamilies[family];
-for(let tier=0;tier<bluntTiers.length;tier++){
-const name=bluntTiers[tier]+' '+theme+' '+shape;
-const powerName=ability+' • '+bluntTiers[tier]+' '+theme;
-const hue=(family*31+tier*8)%360;
-const weapon={price:250+family*95+tier*260,hits:Math.max(1,5-Math.floor(tier/3)-(family%3===0?1:0)),damage:9+tier*4+family*2,color:hexHue(hue,60,48+tier%3*8),head,ability:family,tier:tier+1,powerName};
-bluntWeapons[name]=weapon;knifePrices[name]=weapon.price;knifeSkins[name]=weapon.color;
-bluntPowerByName[powerName]={weapon:name,ability:family,tier:tier+1};
-powerPrices[powerName]=Math.round(weapon.price*.65);
-}}
-function bluntPowerEffect(piece,ability,tier,point){
-const strength=1+tier*.15;
-switch(ability){
-case 0:piece.vx+=50*strength;break;
-case 1:piece.wobble=.15;piece.vy-=25*strength;break;
-case 2:piece.marks=piece.marks||[];piece.marks.push({x:point.x,y:point.y,r:5+tier,crack:true});break;
-case 3:piece.hitCount+=tier>=5?1:0;break;
-case 4:piece.vy-=50*strength;break;
-case 5:piece.vx*=.25;piece.vy*=.25;piece.frostTimer=Math.max(piece.frostTimer||0,1+tier*.35);break;
-case 6:piece.burnTimer=Math.max(piece.burnTimer||0,1+tier*.35);piece.wobble=.09;break;
-case 7:piece.vx+=75*strength;piece.vy-=40*strength;for(let j=0;j<Math.min(tier,6);j++)effects.push({x:piece.x+rand(-30,30),y:piece.y+rand(-30,30),vx:rand(-90,90),vy:rand(-90,90),life:.35,max:.35,r:2});break;
-case 8:piece.spin+=.5*strength;break;
-case 9:piece.vx+=(W/2-piece.x)*.2*strength;break;
-case 10:piece.precisionGlow=1+tier*.2;for(let k=0;k<Math.min(4,tier);k++)effects.push({x:piece.x+rand(-20,20),y:piece.y+rand(-20,20),vx:rand(-80,80),vy:rand(-80,0),life:.35,max:.35,r:2+k});break;
-case 11:piece.hitCount+=tier>=7?2:1;piece.wobble=.18;piece.vy-=30*strength;break;
-}
-}
-function activateBluntPower(){const p=bluntPowerByName[power];if(!p)return false;if(knifeSkin!==p.weapon){announce('Equip '+p.weapon+' to use this linked power');return true}let affected=0;for(const piece of pieces){const pt={x:0,y:0};bluntPowerEffect(piece,p.ability,p.tier,pt);piece.hitCount=(piece.hitCount||0)+Math.max(1,Math.floor(p.tier/3));affected++}if(mode==='boss'){bossHealth=Math.max(0,bossHealth-Math.max(1,Math.round(p.tier*1.5)));if(bossHealth===0){save.bossWins++;if(!save.ownerMode)save.cutos+=500;mode='classic';giant=false;cut({x:W*.2,y:H*.44},{x:W*.8,y:H*.44});saveProgress();walletUpdate()}}powerVisual=1.5;powerHue=p.ability*30;announce(power+' activated • '+affected+' fruit(s) affected');return true}
 
+for(let family=0;family<bluntFamilies.length;family++)for(let tier=0;tier<bluntTiers.length;tier++){
+const [theme,shape,head]=bluntFamilies[family],name=bluntTiers[tier]+' '+theme+' '+shape,hue=(family*31+tier*8)%360;
+const weapon={price:250+family*95+tier*260,hits:Math.max(1,5-Math.floor(tier/3)-(family%3===0?1:0)),damage:9+tier*4+family*2,color:hexHue(hue,60,48+tier%3*8),head};
+bluntWeapons[name]=weapon;knifePrices[name]=weapon.price;knifeSkins[name]=weapon.color;
+}
+const bluntPowerByName={};
+const cutoBluntEffects=['Launch','Crush','Rebound','Freeze','Scorch','Orbit','Magnetize','Repel','Spin','Quake','Split Pressure','Jelly Pulse','Stasis','Vortex','Shatter Pulse','Bounce','Hover','Sink','Pulse Wave','Rattle','Shock','Glide','Vacuum','Scatter','Resonance'];
+const cutoBluntStyles=['Gentle','Swift','Heavy','Twin','Triple','Wide','Focused','Lingering','Chain','Cataclysmic'];
+for(let effect=0;effect<25;effect++)for(let style=0;style<10;style++){
+const name=cutoBluntStyles[style]+' '+cutoBluntEffects[effect];
+bluntPowerByName[name]={effect,style,description:cutoBluntEffects[effect]+' with '+cutoBluntStyles[style].toLowerCase()+' impact behavior'};
+powerPrices[name]=160+effect*35+style*95;
+}
+let cutoBluntFields=[];
+function cutoApplyBluntPower(p,def,origin){
+const e=def.effect,style=def.style,scale=[.55,.85,1.4,.8,1.05,1.1,1.2,.9,1.35,2][style],strength=(75+style*22)*scale;
+const dx=p.x-origin.x,dy=p.y-origin.y,dist=Math.hypot(dx,dy)||1,nx=dx/dist,ny=dy/dist;
+p.resting=false;p.wobble=Math.max(p.wobble||0,.045+scale*.025);
+switch(e){
+case 0:p.vy-=strength*2;break;
+case 1:deformFruitSurface(p,{x:0,y:-20},8+strength*.07);p.vy+=strength*.5;break;
+case 2:p.vx+=nx*strength;p.vy-=strength*.8;break;
+case 3:p.frostTimer=1+style*.42;p.vx*=.4;break;
+case 4:p.burnTimer=1+style*.4;p.vy-=strength*.25;break;
+case 5:p.spin+=strength*.025;p.vx-=ny*strength*.45;p.vy+=nx*strength*.45;break;
+case 6:p.vx-=nx*strength;p.vy-=ny*strength*.6;break;
+case 7:p.vx+=nx*strength*1.4;p.vy+=ny*strength*.6;break;
+case 8:p.spin+=strength*.055;break;
+case 9:p.vy-=strength;p.vx+=Math.sin(p.x*.04)*strength;break;
+case 10:deformFruitSurface(p,{x:25,y:0},10+scale*12);deformFruitSurface(p,{x:-25,y:0},10+scale*12);break;
+case 11:deformFruitSurface(p,{x:0,y:20},8+scale*9);p.jellyEnergy=1;break;
+case 12:p.vx*=.04;p.vy*=.04;p.frostTimer=.4+style*.2;break;
+case 13:p.vx-=ny*strength;p.vy+=nx*strength;p.spin+=scale*3;break;
+case 14:p.hitCount=(p.hitCount||0)+1+Math.floor(style/3);deformFruitSurface(p,{x:0,y:0},10+scale*8);break;
+case 15:p.vy-=strength*1.6;p.spin+=scale;break;
+case 16:p.vy-=strength*.7;p.vx*=.6;break;
+case 17:p.vy+=strength*1.8;break;
+case 18:p.vx+=nx*strength*.65;p.vy-=strength*.5;break;
+case 19:p.spin+=rand(-1,1)*strength*.06;p.vx+=rand(-1,1)*strength;break;
+case 20:p.vx+=nx*strength;p.vy-=strength*.6;p.precisionGlow=1+scale;break;
+case 21:p.vx+=strength*.6;p.vy-=strength*.4;p.spin+=scale*.5;break;
+case 22:p.vx-=nx*strength*1.5;p.vy-=ny*strength*.8;break;
+case 23:p.vx+=rand(-strength,strength);p.vy-=rand(20,strength);break;
+case 24:p.wobble=.2;p.spin+=scale*1.5;deformFruitSurface(p,{x:0,y:0},6+scale*10);break;
+}
+if(style===3){p.vx*=1.15;p.vy*=1.15}
+if(style===4){p.spin+=.9;p.vy-=25}
+if(style===5){p.precisionGlow=1.5}
+if(style===6){p.vx*=.65;p.vy*=1.25}
+if(style===7){p.frostTimer=Math.max(p.frostTimer||0,.45)}
+if(style===8){p.spin+=2;p.vx+=nx*45}
+if(style===9){p.vy-=70;deformFruitSurface(p,{x:0,y:0},16)}
+}
+function activateBluntPower(){
+const def=bluntPowerByName[power];if(!def)return false;
+if(!bluntWeapons[knifeSkin]){announce('Equip a blunt weapon to activate this power');return true}
+const origin={x:W/2,y:H*.44},targets=pieces.filter(p=>p.poly?.length);
+for(const p of targets)cutoApplyBluntPower(p,def,origin);
+const count=Math.min(28,4+def.style*2);
+for(let i=0;i<count;i++)effects.push({x:origin.x+rand(-45,45),y:origin.y+rand(-45,45),vx:rand(-160,160),vy:rand(-160,60),life:.45+def.style*.035,max:.8,r:2+def.effect%4});
+if(mode==='boss'&&targets.length){bossHealth=Math.max(0,bossHealth-Math.max(1,2+Math.floor(def.style/3)+(def.effect===14?4:0)))}
+powerVisual=1.5;powerHue=(def.effect*17+def.style*25)%360;
+announce(power+' • '+targets.length+' fruit(s) affected');return true;
+}
 function strokeHit(a,b,p){const aa=local(a,p),bb=local(b,p);for(let i=0;i<=20;i++){const t=i/20,point={x:aa.x+(bb.x-aa.x)*t,y:aa.y+(bb.y-aa.y)*t};if(pointInsidePoly(point,p.poly))return point}return null}
 function pointInsidePoly(pt,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside}
 function cutoSoftBody(p){
@@ -336,8 +370,8 @@ if(m.crack&&p.hitCount>=(bluntWeapons[knifeSkin]?.hits||3)+5){ctx.strokeStyle='#
 }
 ctx.restore()}
 function drawBluntWeapon(x,y,angle,scale){const w=bluntWeapons[knifeSkin];ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.lineCap='round';ctx.strokeStyle='#76543b';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-60,0);ctx.lineTo(15,0);ctx.stroke();ctx.fillStyle=w.color;ctx.strokeStyle='#ffffff88';ctx.lineWidth=2;ctx.beginPath();if(w.head==='club'){ctx.ellipse(40,0,40,17,-.15,0,Math.PI*2)}else if(w.head==='mace'){ctx.arc(42,0,22,0,Math.PI*2)}else if(w.head==='maul'){ctx.roundRect(8,-26,67,52,9)}else{ctx.roundRect(w.head==='mallet'?4:12,w.head==='mallet'?-27:-19,w.head==='mallet'?66:53,w.head==='mallet'?54:38,7)}ctx.fill();ctx.save();ctx.clip();cutoDrawMaterial(ctx,knifeSkin,'weapon',-5,-32,90,64);const bevel=ctx.createLinearGradient(0,-32,0,32);bevel.addColorStop(0,'#ffffffaa');bevel.addColorStop(.35,'#ffffff12');bevel.addColorStop(.65,'#080b1a55');bevel.addColorStop(1,'#ffffff6a');ctx.fillStyle=bevel;ctx.fillRect(-5,-32,90,64);ctx.restore();ctx.stroke();ctx.restore()}
-function strikeBlunt(a,b){let hits=0,breaks=0;for(const p of [...pieces]){if(impactMarks(a,b,p,'blunt')){hits++;const weapon=bluntWeapons[knifeSkin];if(weapon.ability!==undefined){const linked=bluntPowerByName[weapon.powerName];if(linked&&save.ownedPowers.includes(weapon.powerName))bluntPowerEffect(p,weapon.ability,weapon.tier,{x:0,y:0})}if(p.hitCount>=bluntWeapons[knifeSkin].hits+2&&p.marks.length>=2)p.marks[p.marks.length-1].crack=p.hitCount>=bluntWeapons[knifeSkin].hits+5;if(p.hitCount>=bluntWeapons[knifeSkin].hits+5&&p.depth<5)breaks++}}if(breaks){cut(a,b);announce('FRUIT CRACKED OPEN!')}if(hits){cutoAwardWeaponXP(hits);save.total+=hits;save.combo+=hits;save.maxCombo=Math.max(save.maxCombo,save.combo);saveProgress();walletUpdate();announce('IMPACT • '+hits+' hit'+(hits>1?'s':'')+' • dents '+(hits?'building':'none'));if(navigator.vibrate)navigator.vibrate(25)}return hits>0}
-function strikeBoss(a,b){const p=pieces[0];if(!p||!impactMarks(a,b,p,'boss'))return false;const equippedBlunt=bluntWeapons[knifeSkin];const damage=(equippedBlunt?.damage||12)+(equippedBlunt?.powerName&&save.ownedPowers.includes(equippedBlunt.powerName)?Math.ceil(equippedBlunt.tier*1.5):0);bossHealth=Math.max(0,bossHealth-damage);save.total++;saveProgress();walletUpdate();if(bossHealth>0){announce('BOSS HIT • -'+damage+' HP • '+bossHealth+' remaining');return true}
+function strikeBlunt(a,b){let hits=0,breaks=0;for(const p of [...pieces]){if(impactMarks(a,b,p,'blunt')){hits++;const weapon=bluntWeapons[knifeSkin];if(p.hitCount>=bluntWeapons[knifeSkin].hits+2&&p.marks.length>=2)p.marks[p.marks.length-1].crack=p.hitCount>=bluntWeapons[knifeSkin].hits+5;if(p.hitCount>=bluntWeapons[knifeSkin].hits+5&&p.depth<5)breaks++}}if(breaks){cut(a,b);announce('FRUIT CRACKED OPEN!')}if(hits){cutoAwardWeaponXP(hits);save.total+=hits;save.combo+=hits;save.maxCombo=Math.max(save.maxCombo,save.combo);saveProgress();walletUpdate();announce('IMPACT • '+hits+' hit'+(hits>1?'s':'')+' • dents '+(hits?'building':'none'));if(navigator.vibrate)navigator.vibrate(25)}return hits>0}
+function strikeBoss(a,b){const p=pieces[0];if(!p||!impactMarks(a,b,p,'boss'))return false;const equippedBlunt=bluntWeapons[knifeSkin];const damage=equippedBlunt?.damage||12;bossHealth=Math.max(0,bossHealth-damage);save.total++;saveProgress();walletUpdate();if(bossHealth>0){announce('BOSS HIT • -'+damage+' HP • '+bossHealth+' remaining');return true}
 save.bossWins++;if(!save.ownerMode)save.cutos+=100;saveProgress();walletUpdate();announce('BOSS DEFEATED! +100 Cutos');mode='classic';giant=false;cut(a,b);return true}
 
 const giftCodes=[
@@ -399,6 +433,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'19.1',title:'250 New Blunt Powers',date:'16 Nov 2026',changes:['Replaced the 120 old weapon-linked blunt powers with 250 independently collectible blunt powers','25 impact behaviors including Launch, Crush, Orbit, Quake, Magnetize, Stasis, Vacuum and Resonance','10 distinct impact styles modify force, spin, duration and deformation for every behavior','Blunt powers now work with any equipped blunt weapon instead of requiring a matching weapon','Added unique impact particles and boss damage interactions','Retained v19.0 fruit resistance, juice physics, precision challenges, destruction lab and weapon mastery']},
 {version:'19.0',title:'Physics Lab & Mastery Expansion',date:'16 Nov 2026',changes:['Fruit-specific cutting resistance: hard skins need stronger or longer strokes; soft fruits slice easily','Cutting now creates colored juice droplets with gravity, splashes and plate contact','Added equal-half, quarter and eighth precision slice challenges with one-time rewards','Added Fruit Destruction Lab with compress, drop and smash experiments','Added per-weapon persistent mastery XP, levels and level-based handling improvements','Added new challenge and mastery menus to Expansion Hub and a Destruction Lab entry in Game Modes','Preserved classic fruit selection and direct Cuto rewards with no RNG mechanics']},
 {version:'18.1',title:'Side Accuracy Counters',date:'16 Nov 2026',changes:['Added compact Perfect, Great, Good and Cut counters along the right side of the play area','Each completed slice updates its accuracy category without blocking the fruit','Accuracy totals persist in the existing player save','Added a subtle highlight to the updated counter instead of large center-screen popups']},
 {version:'18.0',title:'RNG Event Completely Removed',date:'16 Nov 2026',changes:['Removed fruit rolling, rarity tiers, RNG event countdown, event shop and harvest selling','Removed the on-screen Sell button and event-specific menus','Restored direct Cutos from slicing every fruit','Next Fruit and Fruit Collection now let you browse all fruits freely without unlock requirements','Retained the expanded fantasy and colored fruit collection as normal permanent content','Kept existing earned Cutos, cosmetics, achievements and player settings intact']},
@@ -574,7 +609,7 @@ function powerCutExtras(a,b){if(extraCuts<=0)return;const n=Math.min(extraCuts,5
 
 function powersMenu(){
 menu('Powers • Browse & Collect');
-menuText('Filter, sort and equip powers. Linked blunt powers require their matching weapon.');
+menuText('250 distinct blunt power combinations. Equip any blunt weapon to use them; each power has a different impact pattern and strength.');
 const search=document.createElement('input');search.placeholder='Search powers or matching weapons';search.style.cssText='width:100%;padding:9px';content.appendChild(search);
 const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%';content.appendChild(controls);
 const list=document.createElement('div');list.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%';content.appendChild(list);
@@ -586,7 +621,7 @@ selector([['name','A–Z'],['reverse','Z–A'],['priceUp','Lowest price'],['pric
 function refresh(){list.replaceChildren();let entries=Object.entries(powerPrices).filter(([name])=>{const owner=ownerPowers.includes(name),blunt=!!bluntPowerByName[name],owned=save.ownedPowers.includes(name);
 if(category==='owner'&&!owner||category==='blunt'&&!blunt||category==='regular'&&(owner||blunt)||category==='owned'&&!owned||category==='unowned'&&owned)return false;
 if(owner&&!save.ownerMode&&category!=='owner')return false;
-return (name+' '+(blunt?bluntPowerByName[name].weapon:'')).toLowerCase().includes(search.value.trim().toLowerCase())});
+return (name+' '+(blunt?bluntPowerByName[name].description:'')).toLowerCase().includes(search.value.trim().toLowerCase())});
 entries.sort((a,b)=>sort==='priceUp'?a[1]-b[1]||a[0].localeCompare(b[0]):sort==='priceDown'?b[1]-a[1]||a[0].localeCompare(b[0]):sort==='reverse'?b[0].localeCompare(a[0]):a[0].localeCompare(b[0]));
 summary.textContent=entries.length+' powers shown';
 for(const [name,price] of entries){const owned=save.ownedPowers.includes(name),equipped=power===name,linked=bluntPowerByName[name],owner=ownerPowers.includes(name);
