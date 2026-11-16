@@ -260,19 +260,55 @@ function activateBluntPower(){const p=bluntPowerByName[power];if(!p)return false
 
 function strokeHit(a,b,p){const aa=local(a,p),bb=local(b,p);for(let i=0;i<=20;i++){const t=i/20,point={x:aa.x+(bb.x-aa.x)*t,y:aa.y+(bb.y-aa.y)*t};if(pointInsidePoly(point,p.poly))return point}return null}
 function pointInsidePoly(pt,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside}
+function cutoSoftBody(p){
+if(!p.poly||p.poly.length<8||!p.whole)return null;
+if(!p.soft||p.soft.length!==p.poly.length){
+p.soft=p.poly.map(v=>({rx:v.x,ry:v.y,vx:0,vy:0}));
+p.softArea=Math.max(1,area(p.poly));
+}
+return p.soft;
+}
 function deformFruitSurface(p,point,strength){
-if(!p.poly||p.poly.length<8)return;
-const poly=p.poly,center=centroid(poly);
+const soft=cutoSoftBody(p);if(!soft)return;
+const poly=p.poly,center=centroid(poly),n=poly.length;
 let nearest=0,best=Infinity;
-for(let i=0;i<poly.length;i++){const v=poly[i],dist=(v.x-point.x)**2+(v.y-point.y)**2;if(dist<best){best=dist;nearest=i}}
-const n=poly.length,tip=poly[nearest],radius=Math.hypot(tip.x-center.x,tip.y-center.y);
-const depth=Math.min(radius*.17,Math.max(2.5,strength));
-const span=Math.max(2,Math.min(Math.floor(n/9),8));
-for(let j=-span;j<=span;j++){const i=(nearest+j+n)%n,v=poly[i],falloff=(1+Math.cos(Math.PI*Math.abs(j)/(span+1)))*.5;
-const dx=v.x-center.x,dy=v.y-center.y,length=Math.hypot(dx,dy)||1;
-const move=Math.min(depth*falloff,Math.max(0,length-radius*.58));
-v.x-=dx/length*move;v.y-=dy/length*move}
+for(let i=0;i<n;i++){const v=poly[i],dist=(v.x-point.x)**2+(v.y-point.y)**2;if(dist<best){best=dist;nearest=i}}
+const tip=poly[nearest],radius=Math.hypot(tip.x-center.x,tip.y-center.y);
+const force=Math.min(radius*.24,Math.max(3,strength));
+const span=Math.max(3,Math.min(Math.floor(n/5),13));
+for(let j=-span;j<=span;j++){
+const i=(nearest+j+n)%n,v=poly[i],node=soft[i];
+const weight=Math.pow((1+Math.cos(Math.PI*Math.abs(j)/(span+1)))*.5,1.4);
+const dx=v.x-center.x,dy=v.y-center.y,len=Math.hypot(dx,dy)||1;
+const push=force*weight;
+node.vx-=dx/len*push*12;node.vy-=dy/len*push*12;
+node.rx-=dx/len*push*.23;node.ry-=dy/len*push*.23;
+}
+p.jellyEnergy=Math.min(1,(p.jellyEnergy||0)+.4);
 p.dentCount=(p.dentCount||0)+1;
+}
+function updateFruitSoftBody(p,dt){
+const soft=p.soft;if(!soft||!p.whole||soft.length!==p.poly.length)return;
+const n=soft.length,step=Math.min(dt,.033);
+const stiffness=48,damping=Math.exp(-7*step);
+const old=soft.map(v=>({x:v.rx,y:v.ry}));
+for(let i=0;i<n;i++){
+const v=p.poly[i],node=soft[i],prev=p.poly[(i+n-1)%n],next=p.poly[(i+1)%n];
+const neighborX=(prev.x+next.x)*.5-v.x,neighborY=(prev.y+next.y)*.5-v.y;
+node.vx+=((node.rx-v.x)*stiffness+neighborX*14)*step;
+node.vy+=((node.ry-v.y)*stiffness+neighborY*14)*step;
+node.vx*=damping;node.vy*=damping;
+v.x+=node.vx*step;v.y+=node.vy*step;
+}
+const current=area(p.poly),target=p.softArea||current;
+if(current>0&&target>0){
+const correction=Math.max(-.006,Math.min(.006,(target/current-1)*.018));
+const center=centroid(p.poly);
+for(let i=0;i<n;i++){const v=p.poly[i],node=soft[i];
+v.x+=(v.x-center.x)*correction;v.y+=(v.y-center.y)*correction;
+node.rx+=(old[i].x-node.rx)*.0003;node.ry+=(old[i].y-node.ry)*.0003;
+}}
+p.jellyEnergy=Math.max(0,(p.jellyEnergy||0)-step*.4);
 }
 function impactMarks(a,b,p,kind){const point=strokeHit(a,b,p);if(!point)return false;p.hitCount=(p.hitCount||0)+1;p.marks=p.marks||[];const threshold=kind==='boss'?2:bluntWeapons[knifeSkin]?.hits||3;
 if(p.hitCount>=threshold){const weapon=bluntWeapons[knifeSkin],force=weapon?Math.min(18,5+(weapon.damage||10)*.22):7;deformFruitSurface(p,point,force);p.marks.push({x:point.x,y:point.y,crack:p.hitCount>=threshold+2,r:Math.min(21,6+p.hitCount*2)});if(p.marks.length>16)p.marks.shift()}
@@ -342,6 +378,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'15.3',title:'Jelly Soft-Body Blunt Physics',date:'16 Nov 2026',changes:['Blunt impacts now inject motion into individual fruit-surface vertices instead of only leaving a fixed dent','Added spring forces, neighboring-point smoothing and damping so fruit surfaces wobble, recoil and settle like jelly','Repeated strikes progressively deform the resting shape while retaining some spring-back','Added gentle area preservation to reduce collapsing fruit outlines','Kept boss fruit intact until its HP reaches zero']},
 {version:'15.2',title:'16 Distinct Knife Silhouettes',date:'16 Nov 2026',changes:['Expanded the collectible knife collection from four generated shapes to sixteen distinct blade families','Added kukri, tanto, scimitar, bowie, karambit, rapier, machete, kris, falchion, butterfly knife, hook blade and gladius designs','Different knife families now have their own blade outlines, handle proportions and guards','Shop Display now uses the same sharp-weapon renderer as gameplay rather than a generic blade placeholder','Preserved existing named knives, prices and ownership']},
 {version:'15.1',title:'Textured Previews & Elemental Impacts',date:'15 Nov 2026',changes:['Display previews now show procedural material texture overlays for knives, blunt weapons and plates','Linked Frost powers visibly freeze fruit, Ember powers burn fruit, Thunder powers create sparks and knockback, and Prism powers create glowing impact effects','Expanded active and passive visual feedback for blunt weapon powers']},
 {version:'15.0',title:'Material & Power Visual Overhaul',date:'15 Nov 2026',changes:['Added cached procedural woodgrain, stone veining, brushed metal and glaze materials to equipment','Added textured metallic highlights and bevels to knives and blunt weapon heads','Added textured plate surfaces with glossy finish','Frostbite now slows individual fruit motion with icy tint, Fire Trail burns with ember particles, Phantom Cut leaves a ghost tint and Precision Beam adds focus glow','Improved appearance without changing existing equipment ownership or saves']},
@@ -653,7 +690,7 @@ function render(){drawBackground();ctx.save();ctx.translate(W/2,H/2);ctx.scale(z
 if(pointer){const a=pointer.start,b=pointer.end,dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);ctx.save();ctx.lineCap='round';ctx.shadowColor=knifeSkins[knifeSkin];ctx.shadowBlur=13;ctx.strokeStyle=({Lightning:'#f8df65',Stars:'#fff5ad',Petals:'#ff93bd',Fire:'#ff7a3c',Frost:'#a3e9ff'})[save.equippedTrail]||knifeSkins[knifeSkin];ctx.globalAlpha=.32;ctx.lineWidth=12*lineSize;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=.9;ctx.lineWidth=2.5*lineSize;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();drawKnife(b.x,b.y,Math.atan2(dy,dx)||0,.9*knifeSize)}
 else if(trail.length>1){ctx.save();ctx.lineCap='round';for(let i=1;i<trail.length;i++){ctx.strokeStyle=({Lightning:'#f8df65',Stars:'#fff5ad',Petals:'#ff93bd',Fire:'#ff7a3c',Frost:'#a3e9ff'})[save.equippedTrail]||knifeSkins[knifeSkin];ctx.globalAlpha=clamp(trail[i].life/.23,0,1)*.8;ctx.lineWidth=7*lineSize;ctx.shadowColor=knifeSkins[knifeSkin];ctx.shadowBlur=14;ctx.beginPath();ctx.moveTo(trail[i-1].x,trail[i-1].y);ctx.lineTo(trail[i].x,trail[i].y);ctx.stroke()}ctx.restore()}ctx.restore()}
 
-function update(dt){if(slowTimer>0){slowTimer-=dt;dt*=.3}if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)document.querySelector('#toast').textContent=''}for(const stain of stains)stain.life-=dt;stains=stains.filter(s=>s.life>0);for(const p of pieces){if(p.frostTimer>0){p.frostTimer-=dt;p.vx*=.92;p.vy*=.92}if(p.burnTimer>0){p.burnTimer-=dt;p.wobble=Math.max(p.wobble||0,.04);if(Math.random()<dt*15)effects.push({x:p.x+rand(-25,25),y:p.y+rand(-25,25),vx:rand(-30,30),vy:-90,life:.35,max:.35,r:3})}if(p.phantomTimer>0)p.phantomTimer-=dt;if(p.precisionGlow>0)p.precisionGlow=Math.max(0,p.precisionGlow-dt);p.vy+=850*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.angle+=p.spin*dt;p.vx*=Math.exp(-1.3*dt);p.spin*=Math.exp(-1.4*dt);const maxR=Math.max(...p.poly.map(v=>Math.hypot(v.x,v.y)));const floor=plateY-25;if(p.y+maxR*.50>floor&&p.vy>0){p.y=floor-maxR*.50;p.vy*=-.23;p.vx*=.78;p.spin*=.65;p.wobble=.14}p.x=clamp(p.x,20,W-20);if(p.wobble)p.wobble=Math.max(0,p.wobble-dt)}if(!save.performanceMode)for(let i=0;i<pieces.length;i++)for(let j=i+1;j<pieces.length;j++){const a=pieces[i],b=pieces[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||1,ra=Math.sqrt(area(a.poly)/Math.PI)*.55,rb=Math.sqrt(area(b.poly)/Math.PI)*.55,overlap=ra+rb-dist;if(overlap>0){const nx=dx/dist,ny=dy/dist;a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-relative*.35;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny}}}for(const p of particles){p.life-=dt;p.vy+=700*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}particles=particles.filter(p=>p.life>0);trail=trail.filter(p=>(p.life-=dt)>0);for(const e of effects){e.life-=dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.vy+=180*dt}effects=effects.filter(e=>e.life>0)}
+function update(dt){if(slowTimer>0){slowTimer-=dt;dt*=.3}if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)document.querySelector('#toast').textContent=''}for(const stain of stains)stain.life-=dt;stains=stains.filter(s=>s.life>0);for(const p of pieces){updateFruitSoftBody(p,dt);if(p.frostTimer>0){p.frostTimer-=dt;p.vx*=.92;p.vy*=.92}if(p.burnTimer>0){p.burnTimer-=dt;p.wobble=Math.max(p.wobble||0,.04);if(Math.random()<dt*15)effects.push({x:p.x+rand(-25,25),y:p.y+rand(-25,25),vx:rand(-30,30),vy:-90,life:.35,max:.35,r:3})}if(p.phantomTimer>0)p.phantomTimer-=dt;if(p.precisionGlow>0)p.precisionGlow=Math.max(0,p.precisionGlow-dt);p.vy+=850*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.angle+=p.spin*dt;p.vx*=Math.exp(-1.3*dt);p.spin*=Math.exp(-1.4*dt);const maxR=Math.max(...p.poly.map(v=>Math.hypot(v.x,v.y)));const floor=plateY-25;if(p.y+maxR*.50>floor&&p.vy>0){p.y=floor-maxR*.50;p.vy*=-.23;p.vx*=.78;p.spin*=.65;p.wobble=.14}p.x=clamp(p.x,20,W-20);if(p.wobble)p.wobble=Math.max(0,p.wobble-dt)}if(!save.performanceMode)for(let i=0;i<pieces.length;i++)for(let j=i+1;j<pieces.length;j++){const a=pieces[i],b=pieces[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||1,ra=Math.sqrt(area(a.poly)/Math.PI)*.55,rb=Math.sqrt(area(b.poly)/Math.PI)*.55,overlap=ra+rb-dist;if(overlap>0){const nx=dx/dist,ny=dy/dist;a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-relative*.35;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny}}}for(const p of particles){p.life-=dt;p.vy+=700*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}particles=particles.filter(p=>p.life>0);trail=trail.filter(p=>(p.life-=dt)>0);for(const e of effects){e.life-=dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.vy+=180*dt}effects=effects.filter(e=>e.life>0)}
 function frame(t){try{const dt=Math.min((t-lastTime)/1000||0,.033);lastTime=t;update(dt);render();requestAnimationFrame(frame)}catch(e){showError(e)}}
 function point(e){const rect=canvas.getBoundingClientRect();const x=(e.clientX-rect.left)*(W/Math.max(1,rect.width)),y=(e.clientY-rect.top)*(H/Math.max(1,rect.height));return {x:(x-W/2)/zoomLevel+W/2,y:(y-H/2)/zoomLevel+H/2}}
 canvas.addEventListener('pointerdown',e=>{if(pointer)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);const start=point(e);audio();pointer={id:e.pointerId,start,end:{...start}}});
