@@ -798,6 +798,6 @@ document.querySelector('#next').addEventListener('click',cutoNextOwnedFruit);doc
 // Initialize independently of the rendering loop so failures are visible.
 function showError(error){const box=document.getElementById('game-error')||document.createElement('pre');box.id='game-error';box.style.cssText='position:fixed;top:30%;left:5%;width:90%;white-space:pre-wrap;background:#5b1b35;color:white;padding:16px;border-radius:12px;z-index:20;font:13px monospace';box.textContent='Cuto rendering error: '+String(error&&error.stack||error);document.body.appendChild(box)}
 window.addEventListener('error',e=>{const message=String(e.message||'');if(!e.error&&(message==='Script error.'||message==='Script error'))return;if(e.filename&&new URL(e.filename,location.href).origin!==location.origin)return;showError(e.error||message)});
-try{resize();cutoUpdateCutStats();spawn(false);render();requestAnimationFrame(frame)}catch(e){showError(e)}
+try{cutoCleanRemovedBluntContent();saveProgress();resize();cutoUpdateCutStats();spawn(false);render();requestAnimationFrame(frame)}catch(e){showError(e)}
 
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script></body></html>
