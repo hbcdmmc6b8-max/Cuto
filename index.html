@@ -193,6 +193,7 @@ return c}
 const textures=new Map();function getTexture(i,variant=0,whole=false){const key=i+':'+variant+':'+whole;if(!textures.has(key)){if(textures.size>75)textures.clear();textures.set(key,makeTexture(fruits[i],variant,whole))}return textures.get(key)}
 
 const v8Store='cuto-v8-save';let save={cutos:0,ownedKnives:['Classic'],ownedPlates:['Ceramic'],ownedPowers:[],best:0,total:0,perfect:0,ownerMode:false};try{Object.assign(save,JSON.parse(localStorage.getItem(v8Store)||'{}'))}catch(e){}
+function cutoCleanRemovedBluntContent(){const removed=/^(Wooden Mallet|Iron Hammer|Stone Club|Golden Mace|Meteor Maul|(?:Training|Copper|Bronze|Silver|Gold|Crystal|Mythic|Ancient|Celestial|Sovereign) (?:Oak Mallet|Iron Hammer|Granite Club|Royal Mace|Meteor Maul|Frost Hammer|Ember Mace|Thunder Maul|Jade Club|Void Mallet|Prism Mace|Titan Maul))$/;const oldPowers=/^(?:Gentle|Swift|Heavy|Twin|Triple|Wide|Focused|Lingering|Chain|Cataclysmic) (?:Launch|Crush|Rebound|Freeze|Scorch|Orbit|Magnetize|Repel|Spin|Quake|Split Pressure|Jelly Pulse|Stasis|Vortex|Shatter Pulse|Bounce|Hover|Sink|Pulse Wave|Rattle|Shock|Glide|Vacuum|Scatter|Resonance)$/;if(Array.isArray(save.ownedKnives))save.ownedKnives=save.ownedKnives.filter(n=>!removed.test(n));if(Array.isArray(save.ownedPowers))save.ownedPowers=save.ownedPowers.filter(n=>!oldPowers.test(n));if(typeof knifeSkin==='string'&&removed.test(knifeSkin))knifeSkin='Classic';if(typeof power==='string'&&oldPowers.test(power))power='None';}
 function saveProgress(){try{localStorage.setItem(v8Store,JSON.stringify(save))}catch(e){}if(typeof cutoQueueSync==='function')cutoQueueSync()}
 let bossHealth=0;let mode='classic',power='None',slowTimer=0,undoState=null,stains=[],quality='high',ambient='none',photoMode=false,giant=false,multiLines=[],toastTimer=0;
 const powerPrices={'Slow Motion':300,'Multi-Cut':500,'Giant Fruit':750,'Precision Focus':400};
@@ -226,83 +227,6 @@ const flashCodes=[
 function redeemFlashCode(raw){const code=raw.trim().toUpperCase(),gift=flashCodes.find(g=>g.code===code);if(!gift)return false;if(Date.now()<flashStart){announce('Flash codes are not active yet');return true}if(Date.now()>=flashEnd){announce('This one-hour flash code has expired');return true}save.redeemedCodes=save.redeemedCodes||[];if(save.redeemedCodes.includes(code)){announce('Already redeemed');return true}save.redeemedCodes.push(code);if(!save.ownerMode)save.cutos+=gift.cutos;save.xp=(Number(save.xp)||0)+gift.xp;while(save.xp>=(Number(save.level)||1)*80){save.xp-=save.level*80;save.level++;if(!save.ownerMode)save.cutos+=save.level*10}saveProgress();walletUpdate();announce('Flash reward! +'+gift.cutos+' Cutos, +'+gift.xp+' XP');return true}
 
 // Blunt weapons: damage first, surface dents and cracks later, break apart only after enough hits.
-const bluntWeapons={
-'Wooden Mallet':{price:300,hits:3,damage:12,color:'#ba8b58',head:'mallet'},
-'Iron Hammer':{price:650,hits:2,damage:18,color:'#aab5c3',head:'hammer'},
-'Stone Club':{price:850,hits:4,damage:15,color:'#9c9b94',head:'club'},
-'Golden Mace':{price:1300,hits:2,damage:25,color:'#f4cb61',head:'mace'},
-'Meteor Maul':{price:2200,hits:1,damage:35,color:'#a77be4',head:'maul'}
-};
-for(const [name,info] of Object.entries(bluntWeapons)){knifePrices[name]=info.price;knifeSkins[name]=info.color}
-
-const bluntFamilies=[
-['Oak','Mallet','mallet','Rebound'],['Iron','Hammer','hammer','Shockwave'],['Granite','Club','club','Crater'],['Royal','Mace','mace','Sunder'],['Meteor','Maul','maul','Meteorfall'],['Frost','Hammer','hammer','Freeze'],['Ember','Mace','mace','Scorch'],['Thunder','Maul','maul','Thunderclap'],['Jade','Club','club','Resonance'],['Void','Mallet','mallet','Gravity'],['Prism','Mace','mace','Prismatic Burst'],['Titan','Maul','maul','Titan Strike']
-];
-const bluntTiers=['Training','Copper','Bronze','Silver','Gold','Crystal','Mythic','Ancient','Celestial','Sovereign'];
-
-for(let family=0;family<bluntFamilies.length;family++)for(let tier=0;tier<bluntTiers.length;tier++){
-const [theme,shape,head]=bluntFamilies[family],name=bluntTiers[tier]+' '+theme+' '+shape,hue=(family*31+tier*8)%360;
-const weapon={price:250+family*95+tier*260,hits:Math.max(1,5-Math.floor(tier/3)-(family%3===0?1:0)),damage:9+tier*4+family*2,color:hexHue(hue,60,48+tier%3*8),head};
-bluntWeapons[name]=weapon;knifePrices[name]=weapon.price;knifeSkins[name]=weapon.color;
-}
-const bluntPowerByName={};
-const cutoBluntEffects=['Launch','Crush','Rebound','Freeze','Scorch','Orbit','Magnetize','Repel','Spin','Quake','Split Pressure','Jelly Pulse','Stasis','Vortex','Shatter Pulse','Bounce','Hover','Sink','Pulse Wave','Rattle','Shock','Glide','Vacuum','Scatter','Resonance'];
-const cutoBluntStyles=['Gentle','Swift','Heavy','Twin','Triple','Wide','Focused','Lingering','Chain','Cataclysmic'];
-for(let effect=0;effect<25;effect++)for(let style=0;style<10;style++){
-const name=cutoBluntStyles[style]+' '+cutoBluntEffects[effect];
-bluntPowerByName[name]={effect,style,description:cutoBluntEffects[effect]+' with '+cutoBluntStyles[style].toLowerCase()+' impact behavior'};
-powerPrices[name]=160+effect*35+style*95;
-}
-function cutoApplyBluntPower(p,def,origin){
-const e=def.effect,style=def.style,scale=[.55,.85,1.4,.8,1.05,1.1,1.2,.9,1.35,2][style],strength=(75+style*22)*scale;
-const dx=p.x-origin.x,dy=p.y-origin.y,dist=Math.hypot(dx,dy)||1,nx=dx/dist,ny=dy/dist;
-p.resting=false;p.wobble=Math.max(p.wobble||0,.045+scale*.025);
-switch(e){
-case 0:p.vy-=strength*2;break;
-case 1:deformFruitSurface(p,{x:0,y:-20},8+strength*.07);p.vy+=strength*.5;break;
-case 2:p.vx+=nx*strength;p.vy-=strength*.8;break;
-case 3:p.frostTimer=1+style*.42;p.vx*=.4;break;
-case 4:p.burnTimer=1+style*.4;p.vy-=strength*.25;break;
-case 5:p.spin+=strength*.025;p.vx-=ny*strength*.45;p.vy+=nx*strength*.45;break;
-case 6:p.vx-=nx*strength;p.vy-=ny*strength*.6;break;
-case 7:p.vx+=nx*strength*1.4;p.vy+=ny*strength*.6;break;
-case 8:p.spin+=strength*.055;break;
-case 9:p.vy-=strength;p.vx+=Math.sin(p.x*.04)*strength;break;
-case 10:deformFruitSurface(p,{x:25,y:0},10+scale*12);deformFruitSurface(p,{x:-25,y:0},10+scale*12);break;
-case 11:deformFruitSurface(p,{x:0,y:20},8+scale*9);p.jellyEnergy=1;break;
-case 12:p.vx*=.04;p.vy*=.04;p.frostTimer=.4+style*.2;break;
-case 13:p.vx-=ny*strength;p.vy+=nx*strength;p.spin+=scale*3;break;
-case 14:p.hitCount=(p.hitCount||0)+1+Math.floor(style/3);deformFruitSurface(p,{x:0,y:0},10+scale*8);break;
-case 15:p.vy-=strength*1.6;p.spin+=scale;break;
-case 16:p.vy-=strength*.7;p.vx*=.6;break;
-case 17:p.vy+=strength*1.8;break;
-case 18:p.vx+=nx*strength*.65;p.vy-=strength*.5;break;
-case 19:p.spin+=rand(-1,1)*strength*.06;p.vx+=rand(-1,1)*strength;break;
-case 20:p.vx+=nx*strength;p.vy-=strength*.6;p.precisionGlow=1+scale;break;
-case 21:p.vx+=strength*.6;p.vy-=strength*.4;p.spin+=scale*.5;break;
-case 22:p.vx-=nx*strength*1.5;p.vy-=ny*strength*.8;break;
-case 23:p.vx+=rand(-strength,strength);p.vy-=rand(20,strength);break;
-case 24:p.wobble=.2;p.spin+=scale*1.5;deformFruitSurface(p,{x:0,y:0},6+scale*10);break;
-}
-if(style===3){p.vx*=1.15;p.vy*=1.15}
-if(style===4){p.spin+=.9;p.vy-=25}
-if(style===5){p.precisionGlow=1.5}
-if(style===6){p.vx*=.65;p.vy*=1.25}
-if(style===7){p.frostTimer=Math.max(p.frostTimer||0,.45)}
-if(style===8){p.spin+=2;p.vx+=nx*45}
-if(style===9){p.vy-=70;deformFruitSurface(p,{x:0,y:0},16)}
-}
-function activateBluntPower(){
-const def=bluntPowerByName[power];if(!def)return false;
-if(!bluntWeapons[knifeSkin]){announce('Equip a blunt weapon to activate this power');return true}
-const origin={x:W/2,y:H*.44},targets=pieces.filter(p=>p.poly?.length);
-for(const p of targets)cutoApplyBluntPower(p,def,origin);
-const count=Math.min(28,4+def.style*2);
-for(let i=0;i<count;i++)effects.push({x:origin.x+rand(-45,45),y:origin.y+rand(-45,45),vx:rand(-160,160),vy:rand(-160,60),life:.45+def.style*.035,max:.8,r:2+def.effect%4});
-if(mode==='boss'&&targets.length){bossHealth=Math.max(0,bossHealth-Math.max(1,2+Math.floor(def.style/3)+(def.effect===14?4:0)))}
-powerVisual=1.5;powerHue=(def.effect*17+def.style*25)%360;
-announce(power+' • '+targets.length+' fruit(s) affected');return true;
-}
 function strokeHit(a,b,p){const aa=local(a,p),bb=local(b,p);for(let i=0;i<=20;i++){const t=i/20,point={x:aa.x+(bb.x-aa.x)*t,y:aa.y+(bb.y-aa.y)*t};if(pointInsidePoly(point,p.poly))return point}return null}
 function pointInsidePoly(pt,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside}
 function cutoSoftBody(p){
@@ -355,8 +279,8 @@ node.rx+=(old[i].x-node.rx)*.0003;node.ry+=(old[i].y-node.ry)*.0003;
 }}
 p.jellyEnergy=Math.max(0,(p.jellyEnergy||0)-step*.4);
 }
-function impactMarks(a,b,p,kind){const point=strokeHit(a,b,p);if(!point)return false;p.hitCount=(p.hitCount||0)+1;p.marks=p.marks||[];const threshold=kind==='boss'?2:bluntWeapons[knifeSkin]?.hits||3;
-if(p.hitCount>=1){const weapon=bluntWeapons[knifeSkin],force=weapon?Math.min(18,5+(weapon.damage||10)*.22):7;deformFruitSurface(p,point,force);p.marks.push({x:point.x,y:point.y,crack:p.hitCount>=threshold+5,r:Math.min(21,6+p.hitCount*2)});if(p.marks.length>16)p.marks.shift()}
+function impactMarks(a,b,p,kind){const point=strokeHit(a,b,p);if(!point)return false;p.hitCount=(p.hitCount||0)+1;p.marks=p.marks||[];const threshold=kind==='boss'?2:3;
+if(p.hitCount>=1){const force=7;deformFruitSurface(p,point,force);p.marks.push({x:point.x,y:point.y,crack:p.hitCount>=threshold+5,r:Math.min(21,6+p.hitCount*2)});if(p.marks.length>16)p.marks.shift()}
 p.vx+=(b.x-a.x)*.10;p.vy-=Math.min(105,Math.hypot(b.x-a.x,b.y-a.y)*.16);p.spin+=(b.x-a.x)*.002;p.resting=false;p.wobble=.09;return true}
 function drawImpactMarks(p){
 if(!p.marks?.length)return;
@@ -365,13 +289,10 @@ for(const m of p.marks){
 const radius=Math.max(5,m.r||8),g=ctx.createRadialGradient(m.x,m.y,1,m.x,m.y,radius*1.8);
 g.addColorStop(0,'#1d101b58');g.addColorStop(.55,'#50352924');g.addColorStop(1,'#ffffff00');
 ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(m.x,m.y,radius*1.8,radius*1.2,0,0,Math.PI*2);ctx.fill();
-if(m.crack&&p.hitCount>=(bluntWeapons[knifeSkin]?.hits||3)+5){ctx.strokeStyle='#522b3366';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(m.x-radius*.5,m.y);ctx.quadraticCurveTo(m.x,m.y-radius*.4,m.x+radius*.6,m.y+radius*.2);ctx.stroke()}
+if(m.crack&&p.hitCount>=8){ctx.strokeStyle='#522b3366';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(m.x-radius*.5,m.y);ctx.quadraticCurveTo(m.x,m.y-radius*.4,m.x+radius*.6,m.y+radius*.2);ctx.stroke()}
 }
 ctx.restore()}
-function drawBluntWeapon(x,y,angle,scale){const w=bluntWeapons[knifeSkin];ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.lineCap='round';ctx.strokeStyle='#76543b';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-60,0);ctx.lineTo(15,0);ctx.stroke();ctx.fillStyle=w.color;ctx.strokeStyle='#ffffff88';ctx.lineWidth=2;ctx.beginPath();if(w.head==='club'){ctx.ellipse(40,0,40,17,-.15,0,Math.PI*2)}else if(w.head==='mace'){ctx.arc(42,0,22,0,Math.PI*2)}else if(w.head==='maul'){ctx.roundRect(8,-26,67,52,9)}else{ctx.roundRect(w.head==='mallet'?4:12,w.head==='mallet'?-27:-19,w.head==='mallet'?66:53,w.head==='mallet'?54:38,7)}ctx.fill();ctx.save();ctx.clip();cutoDrawMaterial(ctx,knifeSkin,'weapon',-5,-32,90,64);const bevel=ctx.createLinearGradient(0,-32,0,32);bevel.addColorStop(0,'#ffffffaa');bevel.addColorStop(.35,'#ffffff12');bevel.addColorStop(.65,'#080b1a55');bevel.addColorStop(1,'#ffffff6a');ctx.fillStyle=bevel;ctx.fillRect(-5,-32,90,64);ctx.restore();ctx.stroke();ctx.restore()}
-function strikeBlunt(a,b){let hits=0,breaks=0;for(const p of [...pieces]){if(impactMarks(a,b,p,'blunt')){hits++;const weapon=bluntWeapons[knifeSkin];if(p.hitCount>=bluntWeapons[knifeSkin].hits+2&&p.marks.length>=2)p.marks[p.marks.length-1].crack=p.hitCount>=bluntWeapons[knifeSkin].hits+5;if(p.hitCount>=bluntWeapons[knifeSkin].hits+5&&p.depth<5)breaks++}}if(breaks){cut(a,b);announce('FRUIT CRACKED OPEN!')}if(hits){cutoAwardWeaponXP(hits);save.total+=hits;save.combo+=hits;save.maxCombo=Math.max(save.maxCombo,save.combo);saveProgress();walletUpdate();announce('IMPACT • '+hits+' hit'+(hits>1?'s':'')+' • dents '+(hits?'building':'none'));if(navigator.vibrate)navigator.vibrate(25)}return hits>0}
-function strikeBoss(a,b){const p=pieces[0];if(!p||!impactMarks(a,b,p,'boss'))return false;const equippedBlunt=bluntWeapons[knifeSkin];const damage=equippedBlunt?.damage||12;bossHealth=Math.max(0,bossHealth-damage);save.total++;saveProgress();walletUpdate();if(bossHealth>0){announce('BOSS HIT • -'+damage+' HP • '+bossHealth+' remaining');return true}
-save.bossWins++;if(!save.ownerMode)save.cutos+=100;saveProgress();walletUpdate();announce('BOSS DEFEATED! +100 Cutos');mode='classic';giant=false;cut(a,b);return true}
+function strikeBoss(a,b){const before=pieces.length,snap=snapshot();cut(a,b);if(pieces.length<=before)return false;undoState=snap;rewardCut(before,pieces.length);bossHealth=Math.max(0,bossHealth-20);if(bossHealth<=0){save.bossWins++;if(!save.ownerMode)save.cutos+=100;mode='classic';giant=false;announce('BOSS DEFEATED! +100 Cutos')}else announce('BOSS HIT • '+bossHealth+' HP remaining');saveProgress();walletUpdate();return true}
 
 const giftCodes=[
 {code:'CUTO-FROST-26',knife:'Frost Katana',plate:'Frost Platter',cutos:500},
@@ -432,6 +353,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'19.2',title:'Blunt Weapons & Powers Fully Removed',date:'16 Nov 2026',changes:['Deleted all blunt weapons and their generated shop items','Deleted the complete 250-power blunt catalog, activation logic and linked weapon mechanics','Removed blunt weapon and blunt power shop filters, previews and combat paths','Boss mode now accepts normal knife slicing instead of requiring blunt strikes','Kept knives, regular powers, juice physics, cutting resistance, precision challenges, destruction lab and mastery','Previously saved blunt items are no longer available; invalid equipped items fall back to Classic knife and None power']},
 {version:'19.1',title:'250 New Blunt Powers',date:'16 Nov 2026',changes:['Replaced the 120 old weapon-linked blunt powers with 250 independently collectible blunt powers','25 impact behaviors including Launch, Crush, Orbit, Quake, Magnetize, Stasis, Vacuum and Resonance','10 distinct impact styles modify force, spin, duration and deformation for every behavior','Blunt powers now work with any equipped blunt weapon instead of requiring a matching weapon','Added unique impact particles and boss damage interactions','Retained v19.0 fruit resistance, juice physics, precision challenges, destruction lab and weapon mastery']},
 {version:'19.0',title:'Physics Lab & Mastery Expansion',date:'16 Nov 2026',changes:['Fruit-specific cutting resistance: hard skins need stronger or longer strokes; soft fruits slice easily','Cutting now creates colored juice droplets with gravity, splashes and plate contact','Added equal-half, quarter and eighth precision slice challenges with one-time rewards','Added Fruit Destruction Lab with compress, drop and smash experiments','Added per-weapon persistent mastery XP, levels and level-based handling improvements','Added new challenge and mastery menus to Expansion Hub and a Destruction Lab entry in Game Modes','Preserved classic fruit selection and direct Cuto rewards with no RNG mechanics']},
 {version:'18.1',title:'Side Accuracy Counters',date:'16 Nov 2026',changes:['Added compact Perfect, Great, Good and Cut counters along the right side of the play area','Each completed slice updates its accuracy category without blocking the fruit','Accuracy totals persist in the existing player save','Added a subtle highlight to the updated counter instead of large center-screen popups']},
@@ -530,19 +452,13 @@ c.fillStyle=colors[1];c.beginPath();if(form===0||form===2)c.roundRect(-212,-49,4
 c.strokeStyle='#ffffff8a';c.lineWidth=5;c.stroke();
 if(d){c.save();c.globalAlpha=.45;c.strokeStyle=colors[0];for(let j=-180;j<=180;j+=25){c.beginPath();c.moveTo(j,-35);c.lineTo(j+35,35);c.stroke()}c.restore()}
 }else if(type==='power'){
-const linked=bluntPowerByName[name],owner=ownerPowers.includes(name);const hue=linked?(linked.effect*17+linked.style*25)%360:owner?40:210;
+const owner=ownerPowers.includes(name);const hue=owner?40:210;
 for(let i=4;i>=1;i--){c.strokeStyle='hsla('+hue+',90%,'+(45+i*8)+'%,'+(.2+i*.14)+')';c.lineWidth=7-i;c.beginPath();c.arc(0,0,30+i*34,0,7);c.stroke()}
-c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(linked?'BLUNT POWER':owner?'OWNER POWER':'POWER',0,120);
+c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(owner?'OWNER POWER':'POWER',0,120);
 }else{
-if(!bluntWeapons[name]){cutoRenderSharp(c,name,0,0,-.22,2.15)}else{const blunt=bluntWeapons[name];c.rotate(-.22);c.lineCap='round';
-c.strokeStyle=blunt?'#77533a':'#493c55';c.lineWidth=24;c.beginPath();c.moveTo(-220,0);c.lineTo(-60,0);c.stroke();
-c.fillStyle=colors[0];c.strokeStyle='#ffffff99';c.lineWidth=4;c.beginPath();
-if(blunt){if(blunt.head==='club')c.ellipse(65,0,135,35,0,0,7);else if(blunt.head==='mace')c.arc(65,0,65,0,7);else c.roundRect(-65,blunt.head==='maul'?-65:-46,210,blunt.head==='maul'?130:92,14)}
-else{const d=knifeDesign[name],form=d?.form??1;if(form===2)c.roundRect(-58,-45,235,90,8);else{c.moveTo(-55,-20);c.lineTo(160,-20);c.lineTo(235,0);c.lineTo(160,20);c.lineTo(-55,20);c.closePath()}}
-c.save();c.clip();c.fill();cutoDrawMaterial(c,name,'weapon',-65,-70,300,140);const sheen=c.createLinearGradient(0,-60,0,65);sheen.addColorStop(0,'#ffffffa0');sheen.addColorStop(.5,'#ffffff05');sheen.addColorStop(1,'#10102060');c.fillStyle=sheen;c.fillRect(-65,-70,310,140);c.restore();c.stroke();
-if(blunt){c.strokeStyle='#ffffff55';for(let j=-35;j<120;j+=30){c.beginPath();c.moveTo(j,-25);c.lineTo(j+15,25);c.stroke()}}}
+cutoRenderSharp(c,name,0,0,-.22,2.15)
 }
-const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?(bluntPowerByName[name]?'Blunt effect: '+bluntPowerByName[name].description:'Ability visual preview'):type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':bluntWeapons[name]?'Blunt weapon • '+bluntWeapons[name].damage+' boss damage • dents after '+bluntWeapons[name].hits+' hits':'Knife appearance preview';
+const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?'Ability visual preview':type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':'Knife appearance preview';
 const close=document.createElement('button');close.textContent='Close preview';close.onclick=()=>overlay.remove();
 overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
 card.append(title,canvas,info,close);overlay.appendChild(card);document.body.appendChild(overlay);
@@ -558,9 +474,9 @@ function control(options,callback){const select=document.createElement('select')
 control([['knife','🔪 Knives'],['plate','🍽️ Plates']],v=>{kind=v;drawShop()});
 control([['all','All items'],['unowned','Not owned'],['owned','Owned'],['affordable','Affordable'],['favorites','★ Favorites']],v=>{view=v;drawShop()});
 control([['name','A–Z'],['reverse','Z–A'],['priceUp','Lowest price'],['priceDown','Highest price'],['capacity','Plate capacity']],v=>{sort=v;drawShop()});
-control([['all','All categories'],['owner','Owner only'],['blunt','Blunt weapons'],['sharp','Sharp knives'],['plate','Plates']],v=>{category=v;if(v==='plate')kind='plate';else if(v==='blunt'||v==='sharp')kind='knife';drawShop()});
+control([['all','All categories'],['owner','Owner only'],['plate','Plates']],v=>{category=v;if(v==='plate')kind='plate';drawShop()});
 function drawShop(){results.replaceChildren();const prices=kind==='knife'?knifePrices:platePrices,ownedList=kind==='knife'?save.ownedKnives:save.ownedPlates,ownerList=kind==='knife'?ownerKnives:ownerPlates;
-let entries=Object.entries(prices).filter(([name,price])=>{const owned=ownedList.includes(name),fav=favorites.includes(kind+':'+name),owner=ownerList.includes(name);if(owner&&!save.ownerMode&&category!=='owner')return false;if(category==='owner'&&!owner)return false;if(category==='blunt'&&!bluntWeapons[name])return false;if(category==='sharp'&&(kind!=='knife'||bluntWeapons[name]))return false;if(category==='plate'&&kind!=='plate')return false;if(!name.toLowerCase().includes(search.value.trim().toLowerCase()))return false;if(view==='owned'&&!owned||view==='unowned'&&owned||view==='favorites'&&!fav||view==='affordable'&&(owned||(!save.ownerMode&&price>save.cutos)))return false;return true});
+let entries=Object.entries(prices).filter(([name,price])=>{const owned=ownedList.includes(name),fav=favorites.includes(kind+':'+name),owner=ownerList.includes(name);if(owner&&!save.ownerMode&&category!=='owner')return false;if(category==='owner'&&!owner)return false;if(category==='plate'&&kind!=='plate')return false;if(!name.toLowerCase().includes(search.value.trim().toLowerCase()))return false;if(view==='owned'&&!owned||view==='unowned'&&owned||view==='favorites'&&!fav||view==='affordable'&&(owned||(!save.ownerMode&&price>save.cutos)))return false;return true});
 entries.sort((a,b)=>sort==='priceUp'?a[1]-b[1]:sort==='priceDown'?b[1]-a[1]:sort==='capacity'&&kind==='plate'?(plateCapacity[b[0]]||0)-(plateCapacity[a[0]]||0):sort==='reverse'?b[0].localeCompare(a[0]):a[0].localeCompare(b[0]));
 summary.textContent=entries.length+' items shown • '+kind+' collection: '+ownedList.length+'/'+Object.keys(prices).length;
 if(!entries.length){const p=document.createElement('p');p.textContent='No matching items. Try another filter.';results.appendChild(p)}
@@ -608,30 +524,30 @@ function powerCutExtras(a,b){if(extraCuts<=0)return;const n=Math.min(extraCuts,5
 
 function powersMenu(){
 menu('Powers • Browse & Collect');
-menuText('250 distinct blunt power combinations. Equip any blunt weapon to use them; each power has a different impact pattern and strength.');
-const search=document.createElement('input');search.placeholder='Search powers or matching weapons';search.style.cssText='width:100%;padding:9px';content.appendChild(search);
+menuText('Browse, purchase and equip fruit-slicing powers.');
+const search=document.createElement('input');search.placeholder='Search powers';search.style.cssText='width:100%;padding:9px';content.appendChild(search);
 const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%';content.appendChild(controls);
 const list=document.createElement('div');list.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%';content.appendChild(list);
 const summary=document.createElement('small');content.insertBefore(summary,list);
 let category='all',sort='name';
 function selector(options,onchange){const el=document.createElement('select');el.style.cssText='flex:1;min-width:120px;max-width:100%;padding:8px;border-radius:9px;background:#332b48;color:white;border:1px solid #8b709d';for(const [value,label] of options){const option=document.createElement('option');option.value=value;option.textContent=label;el.appendChild(option)}el.onchange=()=>onchange(el.value);controls.appendChild(el)}
-selector([['all','All powers'],['owner','Owner only'],['blunt','Blunt powers'],['regular','Other powers'],['owned','Owned'],['unowned','Unowned']],v=>{category=v;refresh()});
+selector([['all','All powers'],['owner','Owner only'],['regular','Other powers'],['owned','Owned'],['unowned','Unowned']],v=>{category=v;refresh()});
 selector([['name','A–Z'],['reverse','Z–A'],['priceUp','Lowest price'],['priceDown','Highest price']],v=>{sort=v;refresh()});
-function refresh(){list.replaceChildren();let entries=Object.entries(powerPrices).filter(([name])=>{const owner=ownerPowers.includes(name),blunt=!!bluntPowerByName[name],owned=save.ownedPowers.includes(name);
-if(category==='owner'&&!owner||category==='blunt'&&!blunt||category==='regular'&&(owner||blunt)||category==='owned'&&!owned||category==='unowned'&&owned)return false;
+function refresh(){list.replaceChildren();let entries=Object.entries(powerPrices).filter(([name])=>{const owner=ownerPowers.includes(name),owned=save.ownedPowers.includes(name);
+if(category==='owner'&&!owner||category==='regular'&&owner||category==='owned'&&!owned||category==='unowned'&&owned)return false;
 if(owner&&!save.ownerMode&&category!=='owner')return false;
-return (name+' '+(blunt?bluntPowerByName[name].description:'')).toLowerCase().includes(search.value.trim().toLowerCase())});
+return name.toLowerCase().includes(search.value.trim().toLowerCase())});
 entries.sort((a,b)=>sort==='priceUp'?a[1]-b[1]||a[0].localeCompare(b[0]):sort==='priceDown'?b[1]-a[1]||a[0].localeCompare(b[0]):sort==='reverse'?b[0].localeCompare(a[0]):a[0].localeCompare(b[0]));
 summary.textContent=entries.length+' powers shown';
-for(const [name,price] of entries){const owned=save.ownedPowers.includes(name),equipped=power===name,linked=bluntPowerByName[name],owner=ownerPowers.includes(name);
+for(const [name,price] of entries){const owned=save.ownedPowers.includes(name),equipped=power===name,owner=ownerPowers.includes(name);
 const card=document.createElement('div');card.style.cssText='display:flex;flex-direction:column;gap:3px;min-width:0;padding:5px;border:1px solid #766087;border-radius:9px;background:#332a46';
 const title=document.createElement('strong');title.textContent=name;title.style.cssText='font-size:11px;line-height:1.2;overflow-wrap:anywhere';
-const meta=document.createElement('small');meta.style.cssText='font-size:9px;opacity:.8;overflow-wrap:anywhere';meta.textContent=(linked?'Weapon: '+linked.weapon+' • ':'')+(owner?'Owner only':price.toLocaleString()+' Cutos');
+const meta=document.createElement('small');meta.style.cssText='font-size:9px;opacity:.8;overflow-wrap:anywhere';meta.textContent=(owner?'Owner only':price.toLocaleString()+' Cutos');
 const btn=document.createElement('button');btn.style.cssText='min-height:27px;padding:3px 5px;font-size:11px;white-space:normal;overflow-wrap:anywhere';btn.textContent=equipped?'✓ Equipped':owned?'Equip':owner?'Owner only':'Buy / Equip';btn.disabled=equipped||owner&&!save.ownerMode;
 btn.onclick=()=>{if(!owned){if(owner&&!save.ownerMode)return;if(!save.ownerMode&&save.cutos<price){announce('Not enough Cutos');return}if(!save.ownerMode)save.cutos-=price;save.ownedPowers.push(name)}power=name;saveProgress();walletUpdate();updatePowerButton();refresh()};const display=document.createElement('button');display.textContent='👁 Display';display.style.cssText='min-height:26px;padding:3px 5px;font-size:11px';display.onclick=()=>cutoItemPreview(name,'power');card.append(title,meta,display,btn);list.appendChild(card)}}
 search.oninput=refresh;refresh()}
 function updatePowerButton(){document.querySelector('#activatePower').textContent='Power: '+power}
-function activatePower(){if(activateBluntPower())return;if(activateAdvancedPower())return;if(power==='Slow Motion'){slowTimer=3;announce('SLOW MOTION')}else if(power==='Giant Fruit'){giant=true;spawn(false);announce('GIANT FRUIT')}else if(power==='Multi-Cut'){multiLines=[];announce('Multi-Cut armed • draw 3 lines')}else if(power==='Precision Focus'){autoPerfectUntil=performance.now()+12000;for(const piece of pieces)piece.precisionGlow=3;announce('Precision guide active for 12 seconds')}else announce('Equip a Power first')}
+function activatePower(){if(activateAdvancedPower())return;if(power==='Slow Motion'){slowTimer=3;announce('SLOW MOTION')}else if(power==='Giant Fruit'){giant=true;spawn(false);announce('GIANT FRUIT')}else if(power==='Multi-Cut'){multiLines=[];announce('Multi-Cut armed • draw 3 lines')}else if(power==='Precision Focus'){autoPerfectUntil=performance.now()+12000;for(const piece of pieces)piece.precisionGlow=3;announce('Precision guide active for 12 seconds')}else announce('Equip a Power first')}
 
 
 function cutoSpecialFruitLook(name){
@@ -680,7 +596,7 @@ function cutoChallengeCheck(){if(!cutoCutChallenge)return;const target=cutoCutCh
 function cutoDestructionMenu(){menu('Fruit Destruction Lab');menuText('Experiment with fruit physics. Lab actions do not earn cutting rewards.');menuButton('Compress fruit',()=>{for(const p of pieces){if(!p.whole)continue;deformFruitSurface(p,{x:0,y:-Math.sqrt(area(p.poly))/3},Math.sqrt(area(p.poly))*.13);p.wobble=.16}panel.hidden=true});menuButton('Drop fruit',()=>{for(const p of pieces){p.y=Math.min(p.y,H*.17);p.vy=180;p.vx=rand(-60,60);p.resting=false}panel.hidden=true});menuButton('Smash fruit',()=>{for(const p of pieces){p.vy-=280;p.spin+=rand(-3,3);p.resting=false;if(p.whole)deformFruitSurface(p,{x:0,y:0},20);cutoJuiceBurst(p,null,null,15)}panel.hidden=true});menuButton('← Back',modesMenu)}
 
 function rewardCut(before,after){if(after<=before)return;const newPieces=pieces.slice(-2),sizes=newPieces.map(p=>area(p.poly));const ratio=sizes.length===2?Math.min(...sizes)/Math.max(...sizes):.2,accuracy=100*ratio;const earned=performance.now()<autoPerfectUntil?20:accuracy>95?20:accuracy>80?10:accuracy>55?5:2;if(!save.ownerMode)save.cutos+=earned;if(cutoPowerBonus>0&&performance.now()<cutoPowerExpiry){if(!save.ownerMode)save.cutos+=cutoPowerBonus*2}save.total++;cutoAwardWeaponXP(Math.max(1,after-before));cutoRecordCutRating(accuracy);if(accuracy>95)save.perfect++;save.best=Math.max(save.best,accuracy);expansionReward(accuracy,Math.max(1,after-before));if(save.precisionTarget===fruits[fruitIndex].name&&accuracy>=98){const key='precision:'+save.precisionTarget;if(!save.questClaims[key]){save.questClaims[key]=true;save.precisionWins++;if(!save.ownerMode)save.cutos+=100;announce('Precision challenge cleared! +100 Cutos')}save.precisionTarget=null}if(mode==='boss'&&accuracy>=60){bossHealth=Math.max(0,bossHealth-Math.max(1,Math.round(accuracy/15)));if(bossHealth===0){save.bossWins++;if(!save.ownerMode)save.cutos+=500;announce('BOSS DEFEATED! +500 Cutos');mode='classic'}}saveProgress();walletUpdate();/* Cut rating popups removed: harvest goes directly into inventory. */if(power==='Slow Motion'&&accuracy>90)slowTimer=1.3}
-function v8Cut(a,b){if(mode==='boss')return strikeBoss(a,b);if(bluntWeapons[knifeSkin])return strikeBlunt(a,b);const before=pieces.length;const snap=snapshot();cut(a,b);powerCutExtras(a,b);if(pieces.length>before){undoState=snap;rewardCut(before,pieces.length);cutoChallengeCheck();for(let i=0;i<10;i++)stains.push({x:(a.x+b.x)/2+rand(-45,45),y:plateY+rand(-20,20),size:rand(2,8),life:7});if(stains.length>70)stains.splice(0,stains.length-70)}return pieces.length>before}
+function v8Cut(a,b){if(mode==='boss')return strikeBoss(a,b);const before=pieces.length;const snap=snapshot();cut(a,b);powerCutExtras(a,b);if(pieces.length>before){undoState=snap;rewardCut(before,pieces.length);cutoChallengeCheck();for(let i=0;i<10;i++)stains.push({x:(a.x+b.x)/2+rand(-45,45),y:plateY+rand(-20,20),size:rand(2,8),life:7});if(stains.length>70)stains.splice(0,stains.length-70)}return pieces.length>before}
 function drawV8Extras(){ctx.save();if(mode==='boss'){ctx.fillStyle='#321d31';ctx.fillRect(W*.15,H*.11,W*.7,15);ctx.fillStyle='#ed5572';ctx.fillRect(W*.15,H*.11,W*.7*Math.max(0,bossHealth)/100,15);ctx.fillStyle='white';ctx.font='bold 14px sans-serif';ctx.fillText('FRUIT BOSS • '+bossHealth+' HP',W*.17,H*.10)}if(powerVisual>0){ctx.globalAlpha=Math.min(.45,powerVisual*.15);ctx.strokeStyle=hexHue(powerHue,95,70);ctx.lineWidth=3;for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(W/2,H*.44,55+i*40+(2-powerVisual)*12,45+i*32,0,0,7);ctx.stroke()}ctx.globalAlpha=1;powerVisual=Math.max(0,powerVisual-.018)}for(const stain of stains){ctx.globalAlpha=Math.min(.4,stain.life/7*.4);ctx.fillStyle=fruits[fruitIndex].flesh;ctx.beginPath();ctx.ellipse(stain.x,stain.y,stain.size*1.5,stain.size*.5,0,0,7);ctx.fill()}ctx.globalAlpha=1;
 if(ambient!=='none'&&quality!=='low'&&!save.performanceMode){const time=performance.now()*.001;ctx.fillStyle=ambient==='snow'?'#ffffffa8':ambient==='rain'?'#b9e8ff80':'#d9b77b99';for(let i=0;i<(quality==='high'?30:14);i++){const x=((i*83.37+Math.sin(i*7)*27)%W+W)%W,y=(i*97+time*(ambient==='snow'?25:ambient==='rain'?200:45))%H;ctx.beginPath();ctx.ellipse(x,y,ambient==='rain'?1:3,ambient==='rain'?10:3,0,0,7);ctx.fill()}}
 if(power==='Precision Focus'&&save.ownedPowers.includes(power)){ctx.strokeStyle='#ffffff55';ctx.setLineDash([6,9]);ctx.beginPath();ctx.moveTo(W/2-30,H*.44);ctx.lineTo(W/2+30,H*.44);ctx.moveTo(W/2,H*.44-30);ctx.lineTo(W/2,H*.44+30);ctx.stroke()}
@@ -700,7 +616,7 @@ document.querySelector('#shopMenu').onclick=shop;document.querySelector('#powerM
 function spawn(advance=true){if(!Number.isInteger(fruitIndex)||fruitIndex<0||fruitIndex>=fruits.length)fruitIndex=0;if(advance){cutoNextOwnedFruit();return;}pointer=null;effects=[];fruitVariant=Math.floor(Math.random()*1000000);pieces=[];particles=[];trail=[];stains=[];cutoJuice=[];undoState=null;const r=Math.min(fruits[fruitIndex].radius*fruitSize*(giant?2.2:1),W*(giant?.46:.30),H*(giant?.35:.20));document.querySelector('#fruitName').textContent=fruits[fruitIndex].name+' • '+fruits.length+' fruits';document.querySelector('#fruitCounter').textContent='Fruit '+(fruitIndex+1)+' / '+fruits.length;const shape=fruitShape(fruits[fruitIndex],r),poly=circlePoly(1).map(v=>({x:v.x*shape.rx,y:v.y*shape.ry}));pieces.push({poly,fruitIndex:fruitIndex,x:W/2,y:H*.44,vx:0,vy:0,angle:0,spin:0,scale:r/144,depth:0,whole:true});if(mode==='sandbox'||mode==='multi')for(let i=1;i<Math.min(mode==='multi'?4:plateSlots(),plateSlots());i++)addFruit();if(mode==='boss'){bossHealth=100;announce('Fruit boss • 100 HP • strike until zero!')}}
 function clip(poly,a,b,side){const out=[];const cross=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],dp=cross(p)*side,dq=cross(q)*side;if(dp>=-1e-7)out.push({...p});if((dp<0&&dq>0)||(dp>0&&dq<0)){const t=dp/(dp-dq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}}return out}
 function local(p,body){const dx=p.x-body.x,dy=p.y-body.y,c=Math.cos(-body.angle),s=Math.sin(-body.angle);return {x:dx*c-dy*s,y:dx*s+dy*c}}
-function cut(a,b){const len=Math.hypot(b.x-a.x,b.y-a.y);if(len<10)return;const next=[];let hits=0;for(const p of pieces){if(p.depth>=(giant?14:9)||area(p.poly)<100){next.push(p);continue}const aa=local(a,p),bb=local(b,p);const bbounds=bounds(p.poly);if(Math.max(aa.x,bb.x)<bbounds.x0||Math.min(aa.x,bb.x)>bbounds.x1||Math.max(aa.y,bb.y)<bbounds.y0||Math.min(aa.y,bb.y)>bbounds.y1){next.push(p);continue}if(!bluntWeapons[knifeSkin]){const force=cutoBladeForce()+Math.min(1.5,len/240)+Math.min(1,cutoWeaponLevel(knifeSkin)*.08);const tough=cutoFruitToughness(p);if(force<tough){p.vx+=(b.x-a.x)*.04;p.vy-=28;p.resting=false;deformFruitSurface(p,aa,Math.min(14,6+tough*2));next.push(p);continue}}const left=clip(p.poly,aa,bb,1),right=clip(p.poly,aa,bb,-1);if(left.length<3||right.length<3||area(left)<70||area(right)<70){next.push(p);continue}
+function cut(a,b){const len=Math.hypot(b.x-a.x,b.y-a.y);if(len<10)return;const next=[];let hits=0;for(const p of pieces){if(p.depth>=(giant?14:9)||area(p.poly)<100){next.push(p);continue}const aa=local(a,p),bb=local(b,p);const bbounds=bounds(p.poly);if(Math.max(aa.x,bb.x)<bbounds.x0||Math.min(aa.x,bb.x)>bbounds.x1||Math.max(aa.y,bb.y)<bbounds.y0||Math.min(aa.y,bb.y)>bbounds.y1){next.push(p);continue}{const force=cutoBladeForce()+Math.min(1.5,len/240)+Math.min(1,cutoWeaponLevel(knifeSkin)*.08);const tough=cutoFruitToughness(p);if(force<tough){p.vx+=(b.x-a.x)*.04;p.vy-=28;p.resting=false;deformFruitSurface(p,aa,Math.min(14,6+tough*2));next.push(p);continue}}const left=clip(p.poly,aa,bb,1),right=clip(p.poly,aa,bb,-1);if(left.length<3||right.length<3||area(left)<70||area(right)<70){next.push(p);continue}
 const c1=centroid(left),c2=centroid(right),parent=centroid(p.poly),ang=p.angle,ca=Math.cos(ang),sa=Math.sin(ang),normal={x:-(b.y-a.y)/len,y:(b.x-a.x)/len};for(const [poly,c,dir] of [[left,c1,1],[right,c2,-1]]){const dx=c.x-parent.x,dy=c.y-parent.y;next.push({fruitIndex:p.fruitIndex,poly:poly.map(v=>({x:v.x-c.x,y:v.y-c.y})),x:p.x+dx*ca-dy*sa+normal.x*dir*2,y:p.y+dx*sa+dy*ca+normal.y*dir*2,vx:p.vx+normal.x*dir*rand(75,125),vy:p.vy+normal.y*dir*rand(65,110)-65,angle:p.angle,spin:p.spin+dir*rand(.8,2.5),scale:p.scale,depth:p.depth+1,whole:false,texOffset:{x:(p.texOffset?.x||0)+c.x,y:(p.texOffset?.y||0)+c.y}})}
 hits++;cutoJuiceBurst(p,a,b,14);for(let i=0;i<13;i++)particles.push({x:(a.x+b.x)/2+rand(-20,20),y:(a.y+b.y)/2+rand(-20,20),vx:rand(-130,130),vy:rand(-220,-30),life:rand(.3,.75),size:rand(2,6)})}
 pieces=next;if(hits&&navigator.vibrate)navigator.vibrate(12)}
@@ -791,7 +707,7 @@ const shine=c.createLinearGradient(0,-50,0,50);shine.addColorStop(0,'#ffffffaa')
 c.strokeStyle=knifeSkins[name]||'#ddd';c.lineWidth=1.6;cutoBladePath(c,form);c.stroke();
 c.strokeStyle='#ffffff80';c.lineWidth=1;c.beginPath();c.moveTo(-12,0);c.lineTo(form===9?142:form===8?45:78,0);c.stroke();
 c.restore()}
-function drawKnife(x,y,angle,scale=1){if(bluntWeapons[knifeSkin])return drawBluntWeapon(x,y,angle,scale);cutoRenderSharp(ctx,knifeSkin,x,y,angle,scale)}
+function drawKnife(x,y,angle,scale=1){cutoRenderSharp(ctx,knifeSkin,x,y,angle,scale)}
 function addCutEffects(a,b){const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;for(let i=0;i<(save.performanceMode?7:25);i++){const t=Math.random(),side=Math.random()<.5?-1:1;effects.push({x:a.x+dx*t,y:a.y+dy*t,vx:nx*side*rand(35,150)+rand(-25,25),vy:ny*side*rand(35,150)+rand(-35,35),life:rand(.16,.43),max:.43,r:rand(1.2,3.5)})}if(effects.length>160)effects.splice(0,effects.length-160)}
 function drawKnifeEffects(){ctx.save();ctx.globalCompositeOperation='lighter';for(const e of effects){ctx.globalAlpha=clamp(e.life/e.max,0,1)*.85;ctx.fillStyle=({Sparks:'#ffd65b',Confetti:['#fc6a85','#73dff3','#ffd65b'][Math.floor(e.x)%3],Hearts:'#ff6c9c',Glitter:'#ffffff'})[save.equippedEffect]||knifeSkins[knifeSkin];ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=9;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill()}ctx.restore()}
 
