@@ -154,6 +154,12 @@ const cutoNewFruitSuffixes=['Apple','Melon','Berry','Pear','Fruit'];
 const cuto235FruitNames=cutoNewFruitConcepts.flatMap(prefix=>cutoNewFruitSuffixes.map(suffix=>prefix+' '+suffix));
 // Append new fruits AFTER the existing sorted collection: legacy harvest keys use numeric fruit indices.
 for(const name of cuto235FruitNames)if(!fruits.some(f=>f.name===name))fruits.push({...baseFruits[family(name)],...cutoSpecialFruitLook(name),name});
+
+// Expansion collection: append-only identifiers keep legacy fruit indexes and save inventories stable.
+const cutoExpansionThemes=['Aster','Brimstone','Cascade','Dewdrop','Equinox','Firefly','Gossamer','Halcyon','Isotope','Juniper','Kestrel','Lumin','Mirage','Nimbus','Obelisk','Polaris','Quicksilver','Reverie','Solstice','Tesseract','Umbral','Verdant','Whisper','Xenon','Zephyr'];
+const cutoExpansionFruitKinds=['Apple','Berry','Melon','Pear','Citrus','Dragon Fruit','Pineapple','Peach','Kiwi','Plum'];
+for(const theme of cutoExpansionThemes)for(const kind of cutoExpansionFruitKinds){const name=theme+' '+kind;if(!fruits.some(f=>f.name===name))fruits.push({...baseFruits[family(name)],...cutoSpecialFruitLook(name),name})}
+
 let fruitHistory=[];let fruitVariant=0;
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);plateY=H*.69;if(pieces.length===0)spawn(false)}
 addEventListener('resize',resize);
@@ -279,6 +285,13 @@ const plateForms=['Tray','Platter','Board','Dish'];
 const plateCapacity={};const knifeDesign={};const plateDesign={};const ownerKnives=['Owner • Celestial Divide','Owner • Infinity Edge','Owner • Pixel Sovereign'];const ownerPlates=['Owner • Infinite Table','Owner • Royal Workshop','Owner • Starforge'];
 function hexHue(h,s=72,l=60){return 'hsl('+h+' '+s+'% '+l+'%)'}
 for(let i=0;i<knifeThemes.length;i++)for(let j=0;j<knifeForms.length;j++){const name=knifeThemes[i]+' '+knifeForms[j],h=(i*47+j*23)%360;knifeSkins[name]=hexHue(h);knifeDesign[name]={form:j,pattern:i%6,hue:h,variant:i,bladeLength:70+(i%6)*7,curve:(i%5)-2,notches:i%4,handleStyle:i%5};knifePrices[name]=180+i*35+j*85}
+
+const cutoExpansionBladeKinds=['Katana','Dagger','Cleaver','Saber','Kukri','Tanto','Scimitar','Bowie','Karambit','Rapier'];
+for(let i=0;i<cutoExpansionThemes.length;i++)for(let j=0;j<cutoExpansionBladeKinds.length;j++){
+const name=cutoExpansionThemes[i]+' '+cutoExpansionBladeKinds[j],h=(i*61+j*37)%360;
+if(!Object.prototype.hasOwnProperty.call(knifePrices,name)){knifePrices[name]=420+i*48+j*70;knifeSkins[name]=hexHue(h);knifeDesign[name]={form:knifeForms.indexOf(cutoExpansionBladeKinds[j]),pattern:(i+j)%6,hue:h,variant:30+i*10+j,handleStyle:(i+j)%5}}
+}
+
 for(let i=0;i<plateThemes.length;i++)for(let j=0;j<plateForms.length;j++){const name=plateThemes[i]+' '+plateForms[j],h=(i*41+j*29)%360,size=j+1;plateSkins[name]=[hexHue(h,39,26),hexHue(h,48,52)];plateDesign[name]={form:j,pattern:i%7,hue:h,variant:i,corners:6+(i%5)*6,sections:i%4+1,handles:i%3,edgeWidth:2+i%5};plateCapacity[name]=size===1?2:size===2?4:size===3?7:10;platePrices[name]=180+i*25+size*230}
 for(const name of Object.keys(platePrices))if(!plateCapacity[name])plateCapacity[name]=name==='Ceramic'?2:name==='Wood'?4:name==='Glass'?7:5;
 for(let i=0;i<ownerKnives.length;i++){const n=ownerKnives[i];knifeSkins[n]=hexHue(190+i*80);knifeDesign[n]={form:i,pattern:5,hue:190+i*80};knifePrices[n]=0}
@@ -421,6 +434,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'21.0',title:'750 Item Collection Expansion',date:'17 Nov 2026',changes:['Added 250 collectible fruit entries, appended without shifting existing fruit indexes','Added 250 themed blade entries with existing family silhouettes and variant details','Added 250 purchasable powers using existing tested ability families and rank effects','Preserved existing prices, currencies, inventories, physics and save keys','Full bespoke 2D asset and animation overhaul remains unfinished']},
 {version:'20.9',title:'Knife Asset Identity Pass',date:'17 Nov 2026',changes:['Added deterministic per-variant blade proportions to the sixteen existing knife silhouettes','Preserved family-specific grips, guards and butterfly knife construction','Retained original cutting physics, purchases, fruit textures, save data and progression','Full bespoke sprite production and browser visual QA remain outstanding']},
 {version:'20.8',title:'Complete Knife Identity Overhaul',date:'17 Nov 2026',changes:['Rebuilt the shared renderer with distinct proportions, grips, guards and silhouettes for all sixteen weapon families','Added family-specific features such as katana wrapping, rapier basket, karambit finger ring, saber knuckle guard, cleaver rivets and gladius pommel','Added themed grip patterns so variants differ beyond their colors','Preserved butterfly knife dedicated design, all collections, purchases, slicing physics and save data']},
 {version:'20.7',title:'Distinct Knife Silhouettes',date:'17 Nov 2026',changes:['Butterfly knives now render as compact balisongs with a short blade, two separated handle channels, hinge pins and latch instead of sword silhouettes','Butterfly knife shape applies to every themed variant in gameplay and shop previews','Kept all knife unlocks, slicing mechanics, save data and prices unchanged']},
@@ -569,6 +583,14 @@ search.oninput=drawShop;drawShop()}
 const powerFamilies=['Time Warp','Fruit Storm','Gravity Well','Mirror Slice','Golden Touch','Frostbite','Fire Trail','Magnet Pull','Precision Beam','Shockwave','Phantom Cut','Bloom Burst'];
 const powerRanks=['Spark','Pulse','Surge','Nova','Vortex','Eclipse','Zenith','Mythic','Omega'];
 const advancedPowers={};for(let i=0;i<powerFamilies.length;i++)for(let j=0;j<powerRanks.length;j++){const name=powerRanks[j]+' '+powerFamilies[i];advancedPowers[name]={family:i,rank:j+1};powerPrices[name]=250+j*125+i*35}
+
+const cutoExpansionPowerRanks=['Prism','Rift','Radiance','Meteor','Pulsewave','Aurora','Overdrive','Mirage','Spectra','Ascendant','Radiant','Cascade','Echo','Tempest','Horizon','Crescent','Stellar','Wildfire','Evergreen','Glimmer','Velocity','Zenithal','Paragon','Vanguard','Apex'];
+const cutoExpansionPowerFamilies=['Time Warp','Fruit Storm','Gravity Well','Mirror Slice','Golden Touch','Frostbite','Fire Trail','Magnet Pull','Precision Beam','Shockwave'];
+for(let i=0;i<cutoExpansionPowerRanks.length;i++)for(let j=0;j<cutoExpansionPowerFamilies.length;j++){
+const name=cutoExpansionPowerRanks[i]+' '+cutoExpansionPowerFamilies[j];
+if(!Object.prototype.hasOwnProperty.call(powerPrices,name)){advancedPowers[name]={family:j,rank:1+i%9};powerPrices[name]=600+i*90+j*45}
+}
+
 const ownerPowers=['Owner • Reality Slice','Owner • Infinite Harvest','Owner • Time Stop','Owner • Perfect Cut','Owner • Fruit Universe'];
 for(const name of ownerPowers)powerPrices[name]=0;
 let powerCharge=0,powerVisual=0,powerHue=0,extraCuts=0,autoPerfectUntil=0;
