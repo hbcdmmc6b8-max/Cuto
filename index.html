@@ -223,6 +223,28 @@ if(/neon|aurora|cosmic|star|prism|gold|silver|crystal/i.test(name)){ctx2.strokeS
 ctx2.restore();
 }
 
+
+// Silhouette masks are applied to both whole and sliced texture atlases, keeping them paired.
+function cutoFruitSilhouette(g,f,rx,ry){
+const t=fruitType(f.name),n=f.name.toLowerCase(),cx=160,cy=160;
+g.beginPath();
+if(t==='banana'){g.moveTo(cx-rx*.9,cy-ry*.85);g.bezierCurveTo(cx-rx*.35,cy-ry*.5,cx-rx*.05,cy+ry*.25,cx+rx*.95,cy+ry*.55);g.bezierCurveTo(cx+rx*.65,cy+ry*.96,cx-rx*.45,cy+ry*.65,cx-rx*.9,cy-ry*.85)}
+else if(t==='pineapple'){g.moveTo(cx,cy-ry);g.bezierCurveTo(cx+rx*.95,cy-ry*.88,cx+rx*.95,cy+ry*.72,cx,cy+ry);g.bezierCurveTo(cx-rx*.95,cy+ry*.72,cx-rx*.95,cy-ry*.88,cx,cy-ry)}
+else if(t==='strawberry'||f.pattern==='heart'){g.moveTo(cx,cy-ry*.7);g.bezierCurveTo(cx-rx*.9,cy-ry*1.25,cx-rx*1.25,cy-ry*.3,cx,cy+ry);g.bezierCurveTo(cx+rx*1.25,cy-ry*.3,cx+rx*.9,cy-ry*1.25,cx,cy-ry*.7)}
+else if(/pear/.test(n)||f.pattern==='pear'){g.moveTo(cx,cy-ry);g.bezierCurveTo(cx+rx*.48,cy-ry*1.1,cx+rx*.38,cy-ry*.35,cx+rx*.75,cy-ry*.12);g.bezierCurveTo(cx+rx*1.15,cy+ry*.95,cx-rx*1.15,cy+ry*.95,cx-rx*.75,cy-ry*.12);g.bezierCurveTo(cx-rx*.38,cy-ry*.35,cx-rx*.48,cy-ry*1.1,cx,cy-ry)}
+else if(t==='dragon'){const steps=28;for(let j=0;j<=steps;j++){const a=j*Math.PI*2/steps-Math.PI/2,spike=j%2?1:.82,x=cx+Math.cos(a)*rx*spike,y=cy+Math.sin(a)*ry*spike;j?g.lineTo(x,y):g.moveTo(x,y)}}
+else if(f.pattern==='star'){const steps=10;for(let j=0;j<=steps;j++){const a=j*Math.PI*2/steps-Math.PI/2,rr=j%2?.63:1,x=cx+Math.cos(a)*rx*rr,y=cy+Math.sin(a)*ry*rr;j?g.lineTo(x,y):g.moveTo(x,y)}}
+else if(t==='pome'){g.moveTo(cx,cy-ry*.88);g.bezierCurveTo(cx+rx*.25,cy-ry*1.12,cx+rx,cy-ry*.93,cx+rx,cy-ry*.18);g.bezierCurveTo(cx+rx*1.08,cy+ry*.92,cx+rx*.35,cy+ry*1.08,cx,cy+ry*.88);g.bezierCurveTo(cx-rx*.35,cy+ry*1.08,cx-rx*1.08,cy+ry*.92,cx-rx,cy-ry*.18);g.bezierCurveTo(cx-rx,cy-ry*.93,cx-rx*.25,cy-ry*1.12,cx,cy-ry*.88)}
+else g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+g.closePath()}
+function cutoFinishFruitSilhouette(g,f,rx,ry,whole){
+g.save();g.globalCompositeOperation='destination-in';cutoFruitSilhouette(g,f,rx,ry);g.fillStyle='#fff';g.fill();g.restore();
+if(!whole)return;
+const t=fruitType(f.name);
+if(t==='pineapple'){g.save();g.translate(160,160-ry*.87);for(let i=-3;i<=3;i++){g.fillStyle=i%2?'#398e4b':'#67b65a';g.beginPath();g.moveTo(i*8,13);g.quadraticCurveTo(i*14-18,-24-Math.abs(i)*7,i*16-5,-43-Math.abs(i)*3);g.quadraticCurveTo(i*13+14,-13,i*8+9,13);g.fill()}g.restore()}
+if(t==='dragon'){g.save();g.strokeStyle='#75d76c';g.lineWidth=5;for(let i=0;i<7;i++){const a=i*Math.PI*2/7;g.beginPath();g.moveTo(160+Math.cos(a)*rx*.72,160+Math.sin(a)*ry*.72);g.quadraticCurveTo(160+Math.cos(a+.24)*rx*1.05,160+Math.sin(a+.24)*ry*1.05,160+Math.cos(a+.4)*rx*1.12,160+Math.sin(a+.4)*ry*1.12);g.stroke()}g.restore()}
+}
+
 function makeTexture(f,variant=0,whole=false){const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d'),cx=160,cy=160,r=144,n=f.name.toLowerCase(),type=fruitType(f.name),random=seeded(hashString(f.name+':'+variant+':'+(whole?'outer':'inner')));
 g.clearRect(0,0,320,320);const shape=fruitShape(f,r),rx=shape.rx,ry=shape.ry;
 ellipse(g,cx,cy,rx,ry,f.skin);
@@ -247,7 +269,7 @@ if(type==='coconut'){for(let i=0;i<95;i++){const x=(random()-.5)*rx*1.9,y=(rando
 if(type==='banana'){g.strokeStyle='#ad8e37';g.lineWidth=4;for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(cx+i*rx*.45,cy-ry*.9);g.quadraticCurveTo(cx+i*rx*.25,cy,cx+i*rx*.45,cy+ry*.9);g.stroke()}}
 if(type==='berry'||type==='grape'){ellipse(g,cx-rx*.35,cy-ry*.42,rx*.19,ry*.16,'#ffffff38')}
 if(type==='pome'||type==='stone'){ellipse(g,cx,cy-ry*.91,12,5,'#483621');g.strokeStyle='#5a462e';g.lineWidth=5;g.beginPath();g.moveTo(cx,cy-ry*.9);g.lineTo(cx+5,cy-ry*1.06);g.stroke();if(/apple/.test(n)){g.fillStyle='#3d8c49';g.beginPath();g.moveTo(cx+2,cy-ry*.99);g.quadraticCurveTo(cx+38,cy-ry*1.34,cx+57,cy-ry*.94);g.quadraticCurveTo(cx+25,cy-ry*.86,cx+2,cy-ry*.99);g.fill();g.strokeStyle='#21623b';g.lineWidth=2;g.beginPath();g.moveTo(cx+5,cy-ry*.99);g.lineTo(cx+43,cy-ry*1.01);g.stroke()}}
-cutoPremiumFruitFinish(g,f,true,rx,ry,random);return c}
+cutoPremiumFruitFinish(g,f,true,rx,ry,random);cutoFinishFruitSilhouette(g,f,rx,ry,whole);return c}
 ellipse(g,cx,cy,rx-7,ry-7,f.core);ellipse(g,cx,cy,rx-17,ry-17,f.flesh);
 const grad=g.createRadialGradient(105,95,3,160,160,155);grad.addColorStop(0,'#ffffff3d');grad.addColorStop(1,'#00000025');g.fillStyle=grad;g.beginPath();g.ellipse(cx,cy,rx-17,ry-17,0,0,Math.PI*2);g.fill();
 if(f.pattern==='woody'){ellipse(g,cx,cy,rx-23,ry-23,'#9e7545');for(let i=0;i<36;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*100;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,3+random()*2,5+random()*4,a,'#51402b')}}
@@ -268,7 +290,7 @@ else if(type==='melon'){const count=32+Math.floor(random()*20);for(let i=0;i<cou
 else if(type==='berry'){if(/blueberry|cranberry|gooseberry|currant/.test(n)){const count=12+Math.floor(random()*12);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*65;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.1,2,a,f.seed)}}else{for(let i=0;i<24;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*83;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.5,2,a,f.seed)}}}
 else if(type==='tropical'||type==='soft'){const count=/jackfruit|soursop|cherimoya|sugar apple/.test(n)?25:Math.floor(random()*6);for(let i=0;i<count;i++){const a=random()*Math.PI*2,rr=Math.sqrt(random())*76;seedShape(g,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,4,7,a,f.seed)}}
 for(let i=0;i<110;i++){const x=(random()-.5)*240,y=(random()-.5)*240;if((x/rx)**2+(y/ry)**2>.85)continue;ellipse(g,cx+x,cy+y,random()*1.5+.3,random()*1.5+.3,i%2?'#ffffff12':'#35201c09')}
-cutoPremiumFruitFinish(g,f,false,rx,ry,random);return c}
+cutoPremiumFruitFinish(g,f,false,rx,ry,random);cutoFinishFruitSilhouette(g,f,rx,ry,whole);return c}
 const textures=new Map();function getTexture(i,variant=0,whole=false){const key=i+':'+variant+':'+whole;if(!textures.has(key)){if(textures.size>75)textures.clear();textures.set(key,makeTexture(fruits[i],variant,whole))}return textures.get(key)}
 
 const v8Store='cuto-v8-save';let save={cutos:0,ownedKnives:['Classic'],ownedPlates:['Ceramic'],ownedPowers:[],best:0,total:0,perfect:0,ownerMode:false};try{Object.assign(save,JSON.parse(localStorage.getItem(v8Store)||'{}'))}catch(e){}
@@ -443,6 +465,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'21.0',title:'Fruit Silhouette Art Pass',date:'17 Nov 2026',changes:['Added paired silhouette masks for whole and sliced fruit textures, including bananas, pineapples, strawberries, pears, dragon fruits, apples and star-pattern fruits','Added pineapple crown leaves and dragon-fruit scale details to procedural artwork','Preserved original fruit indexes, gameplay collision polygons, collection and saved progress','Further bespoke art, knife animations and full device testing remain pending']},
 {version:'21.0',title:'233 Fruits + 233 Knives and Mastery Rewards',date:'17 Nov 2026',changes:['Added 233 append-only fruit IDs with deterministic exterior and interior texture generation','Added 233 collectible knife IDs across existing sixteen distinct weapon families','Weapon mastery levels now award one-time Cutos per weapon and level','Preserved existing collection IDs, unlocks, prices, saved progress and slicing mechanics','Full hand-authored individual sprites, animation coverage and live visual QA remain outstanding']},
 {version:'21.0',title:'750 Item Collection Expansion',date:'17 Nov 2026',changes:['Added 250 collectible fruit entries, appended without shifting existing fruit indexes','Added 250 themed blade entries with existing family silhouettes and variant details','Added 250 purchasable powers using existing tested ability families and rank effects','Preserved existing prices, currencies, inventories, physics and save keys','Full bespoke 2D asset and animation overhaul remains unfinished']},
 {version:'20.9',title:'Knife Asset Identity Pass',date:'17 Nov 2026',changes:['Added deterministic per-variant blade proportions to the sixteen existing knife silhouettes','Preserved family-specific grips, guards and butterfly knife construction','Retained original cutting physics, purchases, fruit textures, save data and progression','Full bespoke sprite production and browser visual QA remain outstanding']},
