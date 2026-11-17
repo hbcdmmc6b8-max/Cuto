@@ -421,6 +421,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'20.7',title:'Distinct Knife Silhouettes',date:'17 Nov 2026',changes:['Butterfly knives now render as compact balisongs with a short blade, two separated handle channels, hinge pins and latch instead of sword silhouettes','Butterfly knife shape applies to every themed variant in gameplay and shop previews','Kept all knife unlocks, slicing mechanics, save data and prices unchanged']},
 {version:'20.5',title:'Classic Cuto Visual Rework',date:'16 Nov 2026',changes:['Rebuilt the HUD, action buttons, side accuracy counters and menu visual hierarchy without replacing the game','Reworked responsive navigation, safe-area spacing, contrast, focus states and touch targets','Restyled the original menus, shops, settings, collections and panels while keeping all gameplay routes','Redesigned the complete fruit selector with searchable color previews and active-selection highlighting','Preserved every existing fruit, knife, plate, power, game mode, slicing mechanic and saved progression','Refined cosmetic knife engraving, grip rivets and polished guards without changing damage or cutting','Retained the premium v20.0 procedural fruit and knife textures and all existing prices and unlocks']},
 {version:'20.0',title:'Grand Texture & Skin Overhaul',date:'16 Nov 2026',changes:['Upgraded all fruit skins and cut interiors with layered light, micro-grain and edge highlights','Added cloud mist, cosmic star-speckle and faceted gemstone details to matching fantasy fruits','Reworked knife skin materials with stronger metallic reflections, edge detail and luminous accents','Improved plate skins with layered gloss, subtle reflections and decorative ring highlights','Upgraded material textures while preserving existing knife, fruit and plate collections','Kept the performance-mode rendering option for lower-end devices and removed no player progress']},
 {version:'19.2',title:'Blunt Weapons & Powers Fully Removed',date:'16 Nov 2026',changes:['Deleted all blunt weapons and their generated shop items','Deleted the complete 250-power blunt catalog, activation logic and linked weapon mechanics','Removed blunt weapon and blunt power shop filters, previews and combat paths','Boss mode now accepts normal knife slicing instead of requiring blunt strikes','Kept knives, regular powers, juice physics, cutting resistance, precision challenges, destruction lab and mastery','Previously saved blunt items are no longer available; invalid equipped items fall back to Classic knife and None power']},
@@ -757,7 +758,23 @@ case 14:c.moveTo(-18,-12);c.lineTo(65,-16);c.quadraticCurveTo(116,-27,117,-55);c
 default:c.moveTo(-18,-17);c.lineTo(72,-17);c.lineTo(96,0);c.lineTo(72,17);c.lineTo(-18,17);
 }
 c.closePath()}
+
+function cutoRenderButterfly(c,name,x,y,angle,scale){
+const d=knifeDesign[name],h=d?.hue||205,k=knifeProfiles[name]||{blade:hexHue(h,24,88),handle:hexHue(h,50,26),guard:hexHue(h,70,65)};
+c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);c.lineJoin='round';c.lineCap='round';
+// Compact balisong silhouette: short narrow blade and two independently visible handle channels.
+c.shadowColor=knifeSkins[name]||'#8ce6ff';c.shadowBlur=7;
+const blade=c.createLinearGradient(0,-13,0,13);blade.addColorStop(0,'#fff');blade.addColorStop(.48,k.blade);blade.addColorStop(1,'#586b82');
+c.fillStyle=blade;c.beginPath();c.moveTo(-13,-6);c.lineTo(47,-5);c.lineTo(66,0);c.lineTo(47,5);c.lineTo(-13,6);c.closePath();c.fill();
+c.strokeStyle=k.guard;c.lineWidth=1.4;c.stroke();c.shadowBlur=0;
+c.strokeStyle='#354252';c.lineWidth=1;c.beginPath();c.moveTo(0,0);c.lineTo(51,0);c.stroke();
+// Two separate handles with a visible gap, hinge pins, and latch.
+for(const side of [-1,1]){const y0=side*8;c.fillStyle=k.handle;c.beginPath();c.roundRect(-77,y0-3,67,6,3);c.fill();c.strokeStyle=k.guard;c.lineWidth=1.6;c.stroke();c.strokeStyle='#ffffff55';c.lineWidth=1;c.beginPath();c.moveTo(-68,y0-1);c.lineTo(-19,y0-1);c.stroke();for(const px of [-65,-48,-31]){c.fillStyle=k.guard;c.beginPath();c.arc(px,y0,1.5,0,7);c.fill()}}
+c.fillStyle=k.guard;for(const y0 of [-8,8]){c.beginPath();c.arc(-13,y0,3.5,0,7);c.fill()}
+c.strokeStyle=k.guard;c.lineWidth=2;c.beginPath();c.moveTo(-74,-8);c.lineTo(-79,-8);c.lineTo(-79,8);c.lineTo(-74,8);c.stroke();c.restore()}
+
 function cutoRenderSharp(c,name,x,y,angle,scale){
+if(/Butterfly Knife/i.test(name))return cutoRenderButterfly(c,name,x,y,angle,scale);
 const d=knifeDesign[name],form=d?.form??(name==='Katana'?0:name==='Chef Knife'?2:1),hue=d?.hue||200;
 const k=knifeProfiles[name]||{handle:hexHue(hue,40,24),guard:hexHue(hue,65,60),blade:hexHue(hue,25,86)};
 c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);
