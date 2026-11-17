@@ -421,6 +421,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'20.8',title:'Complete Knife Identity Overhaul',date:'17 Nov 2026',changes:['Rebuilt the shared renderer with distinct proportions, grips, guards and silhouettes for all sixteen weapon families','Added family-specific features such as katana wrapping, rapier basket, karambit finger ring, saber knuckle guard, cleaver rivets and gladius pommel','Added themed grip patterns so variants differ beyond their colors','Preserved butterfly knife dedicated design, all collections, purchases, slicing physics and save data']},
 {version:'20.7',title:'Distinct Knife Silhouettes',date:'17 Nov 2026',changes:['Butterfly knives now render as compact balisongs with a short blade, two separated handle channels, hinge pins and latch instead of sword silhouettes','Butterfly knife shape applies to every themed variant in gameplay and shop previews','Kept all knife unlocks, slicing mechanics, save data and prices unchanged']},
 {version:'20.5',title:'Classic Cuto Visual Rework',date:'16 Nov 2026',changes:['Rebuilt the HUD, action buttons, side accuracy counters and menu visual hierarchy without replacing the game','Reworked responsive navigation, safe-area spacing, contrast, focus states and touch targets','Restyled the original menus, shops, settings, collections and panels while keeping all gameplay routes','Redesigned the complete fruit selector with searchable color previews and active-selection highlighting','Preserved every existing fruit, knife, plate, power, game mode, slicing mechanic and saved progression','Refined cosmetic knife engraving, grip rivets and polished guards without changing damage or cutting','Retained the premium v20.0 procedural fruit and knife textures and all existing prices and unlocks']},
 {version:'20.0',title:'Grand Texture & Skin Overhaul',date:'16 Nov 2026',changes:['Upgraded all fruit skins and cut interiors with layered light, micro-grain and edge highlights','Added cloud mist, cosmic star-speckle and faceted gemstone details to matching fantasy fruits','Reworked knife skin materials with stronger metallic reflections, edge detail and luminous accents','Improved plate skins with layered gloss, subtle reflections and decorative ring highlights','Upgraded material textures while preserving existing knife, fruit and plate collections','Kept the performance-mode rendering option for lower-end devices and removed no player progress']},
@@ -775,27 +776,69 @@ c.strokeStyle=k.guard;c.lineWidth=2;c.beginPath();c.moveTo(-74,-8);c.lineTo(-79,
 
 function cutoRenderSharp(c,name,x,y,angle,scale){
 if(/Butterfly Knife/i.test(name))return cutoRenderButterfly(c,name,x,y,angle,scale);
-const d=knifeDesign[name],form=d?.form??(name==='Katana'?0:name==='Chef Knife'?2:1),hue=d?.hue||200;
+const d=knifeDesign[name]||{},form=d.form??(name==='Katana'?0:name==='Chef Knife'?2:1),hue=d.hue||200;
 const k=knifeProfiles[name]||{handle:hexHue(hue,40,24),guard:hexHue(hue,65,60),blade:hexHue(hue,25,86)};
-c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);
-c.shadowColor=knifeSkins[name]||'#ffffff';c.shadowBlur=7;
-c.lineCap='round';
-c.fillStyle=k.handle;c.beginPath();
-if(form===8){c.ellipse(-48,2,27,17,-.3,0,7);c.moveTo(-45,-4);c.arc(-48,2,8,0,7,true)}
-else if(form===13){c.roundRect(-80,-10,61,20,5)}
-else if(form===9){c.roundRect(-90,-7,71,14,4)}
-else c.roundRect(-80,-10,62,20,form===0?3:7);
-c.fill('evenodd');
-c.strokeStyle='#ffffff55';c.lineWidth=2;for(let i=0;i<5;i++){c.beginPath();c.moveTo(-73+i*10,-8);c.lineTo(-68+i*10,8);c.stroke()}
+const variant=d.variant||0,style=d.handleStyle??variant%5,shift=(variant%7)-3;
+c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);c.lineJoin='round';c.lineCap='round';
+c.shadowColor=knifeSkins[name]||'#fff';c.shadowBlur=5;
+// The blade is physically proportioned by weapon family, not stretched into one generic sword.
+const lengths=[1.08,.75,.82,1.08,.83,.68,1.04,.91,.58,1.35,.94,.85,1.01,.67,.9,.8];
+const bladeScale=lengths[form]||1;
+c.save();c.scale(bladeScale,1);cutoBladePath(c,form);c.fillStyle=k.blade;c.fill();c.save();c.clip();cutoDrawMaterial(c,name,'weapon',-25,-65,200,135);cutoPremiumBladeFinish(c,name,form);const shine=c.createLinearGradient(0,-45,0,45);shine.addColorStop(0,'#ffffff8f');shine.addColorStop(.42,'#ffffff05');shine.addColorStop(.7,'#15182450');shine.addColorStop(1,'#ffffff40');c.fillStyle=shine;c.fillRect(-25,-65,200,135);c.restore();c.strokeStyle=knifeSkins[name]||'#eee';c.lineWidth=1.5;cutoBladePath(c,form);c.stroke();c.restore();
 c.shadowBlur=0;
-c.strokeStyle=k.guard;c.lineWidth=form===9?3:6;c.beginPath();c.moveTo(-20,-19);c.lineTo(-20,19);c.stroke();
-if(form===13){c.strokeStyle=k.guard;c.lineWidth=4;c.beginPath();c.moveTo(-77,-11);c.lineTo(-77,11);c.stroke()}
-cutoBladePath(c,form);c.save();c.clip();c.fillStyle=k.blade;c.fill();cutoDrawMaterial(c,name,'weapon',-25,-60,190,120);cutoPremiumBladeFinish(c,name,form);
-const shine=c.createLinearGradient(0,-50,0,50);shine.addColorStop(0,'#ffffffaa');shine.addColorStop(.38,'#ffffff10');shine.addColorStop(.55,'#10101b60');shine.addColorStop(.85,'#ffffff80');shine.addColorStop(1,'#11122260');c.fillStyle=shine;c.fillRect(-25,-60,200,120);c.restore();
-c.strokeStyle=knifeSkins[name]||'#ddd';c.lineWidth=1.6;cutoBladePath(c,form);c.stroke();
-c.strokeStyle='#ffffff80';c.lineWidth=1;c.beginPath();c.moveTo(-12,0);c.lineTo(form===9?142:form===8?45:78,0);c.stroke();
-// Cosmetic knife finish: spine engraving, polished guard and grip accents.
-c.save();c.globalAlpha=.82;c.strokeStyle=k.guard;c.lineWidth=1.2;c.beginPath();c.moveTo(2,-5);c.lineTo(form===9?132:form===8?40:78,-5);c.stroke();c.fillStyle='#ffffffb0';for(let j=0;j<3;j++){c.beginPath();c.arc(-64+j*15,0,1.8,0,Math.PI*2);c.fill()}c.fillStyle=k.guard;c.beginPath();c.arc(-19,0,3.5,0,Math.PI*2);c.fill();c.restore();
+// Family-specific handle architecture: ring, basket, slab, tang, crossguard and wrapped grips.
+c.fillStyle=k.handle;c.strokeStyle=k.guard;c.lineWidth=2.2;
+c.beginPath();
+switch(form){
+case 0: c.roundRect(-112,-7,94,14,3);break; // long wrapped katana tsuka
+case 1: c.roundRect(-70,-11,52,22,7);break; // compact dagger
+case 2: c.roundRect(-83,-15,65,30,6);break; // broad cleaver grip
+case 3: c.roundRect(-91,-9,73,18,8);break; // saber
+case 4: c.roundRect(-79,-13,61,26,11);break; // kukri
+case 5: c.roundRect(-70,-9,52,18,3);break; // tanto
+case 6: c.roundRect(-94,-9,76,18,8);break; // scimitar
+case 7: c.roundRect(-88,-12,70,24,7);break; // bowie
+case 8: c.ellipse(-53,0,27,19,0,0,7);break; // ring karambit
+case 9: c.roundRect(-106,-6,88,12,5);break; // thin rapier grip
+case 10:c.roundRect(-84,-13,66,26,8);break; // machete
+case 11:c.roundRect(-75,-11,57,22,5);break; // kris
+case 12:c.roundRect(-94,-12,76,24,6);break; // falchion
+case 14:c.roundRect(-88,-10,70,20,7);break; // hook blade
+case 15:c.roundRect(-75,-13,57,26,4);break; // gladius
+default:c.roundRect(-79,-10,61,20,6);
+}
+c.fill();c.stroke();
+// Distinct grip detailing, tied to each variant and therefore visible in all themed collections.
+c.save();c.beginPath();if(form===8)c.ellipse(-53,0,27,19,0,0,7);else c.rect(form===0?-110:form===9?-104:form===3||form===6||form===12?-91:-82,-16,form===0?90:form===9?86:72,32);c.clip();
+for(let j=0;j<8;j++){const xx=-105+j*12+shift;c.strokeStyle=style===0?'#ffffff72':style===1?k.guard:style===2?'#00000075':style===3?'#ffffff45':'#ffd68a70';c.lineWidth=style===2?4:2;c.beginPath();if(style===1){c.moveTo(xx,-16);c.lineTo(xx+15,16)}else if(style===3){c.moveTo(xx,-16);c.lineTo(xx+12,0);c.lineTo(xx,16)}else if(style===4){c.moveTo(xx,-16);c.lineTo(xx,16)}else{c.moveTo(xx,-16);c.lineTo(xx+8,16)}c.stroke()}c.restore();
+if(form===8){c.fillStyle='#0e1723';c.beginPath();c.arc(-53,0,9,0,7);c.fill();c.strokeStyle=k.guard;c.lineWidth=2;c.stroke();}
+// Family-specific guards and pommels.
+c.strokeStyle=k.guard;c.fillStyle=k.guard;c.lineWidth=3.5;c.beginPath();
+switch(form){
+case 0:c.ellipse(-19,0,6,19,0,0,7);break;
+case 1:c.moveTo(-21,-17);c.lineTo(-17,17);break;
+case 2:c.moveTo(-19,-15);c.lineTo(-19,15);break;
+case 3:c.moveTo(-25,-15);c.quadraticCurveTo(-12,-22,-5,-5);c.moveTo(-25,15);c.quadraticCurveTo(-8,19,-5,4);break;
+case 4:c.moveTo(-21,-14);c.lineTo(-16,12);break;
+case 5:c.moveTo(-20,-9);c.lineTo(-20,9);break;
+case 6:c.moveTo(-23,-17);c.quadraticCurveTo(-4,-21,2,-6);break;
+case 7:c.moveTo(-21,-18);c.lineTo(-13,-9);c.moveTo(-21,18);c.lineTo(-13,9);break;
+case 8:c.arc(-21,0,5,0,7);break;
+case 9:c.moveTo(-22,-16);c.bezierCurveTo(-60,-38,-96,-17,-99,0);c.bezierCurveTo(-96,18,-60,37,-22,16);c.moveTo(-22,-16);c.lineTo(-22,16);break;
+case 10:c.moveTo(-20,-10);c.lineTo(-20,10);break;
+case 11:c.moveTo(-21,-16);c.lineTo(-15,16);break;
+case 12:c.moveTo(-21,-20);c.quadraticCurveTo(-9,-12,-20,0);c.quadraticCurveTo(-9,12,-21,20);break;
+case 14:c.moveTo(-23,-18);c.lineTo(-12,-8);c.moveTo(-23,18);c.lineTo(-12,8);break;
+case 15:c.moveTo(-23,-19);c.lineTo(-16,-19);c.moveTo(-23,19);c.lineTo(-16,19);c.moveTo(-23,-19);c.lineTo(-23,19);break;
+default:c.moveTo(-20,-15);c.lineTo(-20,15);
+}
+c.stroke();
+if(form===9){c.strokeStyle=k.guard;c.lineWidth=2;c.beginPath();c.ellipse(-103,0,5,7,0,0,7);c.stroke()}
+if(form===15){c.fillStyle=k.guard;c.beginPath();c.arc(-76,0,8,0,7);c.fill()}
+if(form===0){c.strokeStyle='#ffffffb5';c.lineWidth=1;c.beginPath();c.moveTo(-108,0);c.lineTo(-26,0);c.stroke()}
+if(form===2){c.fillStyle='#ffffffb0';for(let i=0;i<3;i++){c.beginPath();c.arc(-72+i*16,0,2,0,7);c.fill()}}
+if(form===8){c.strokeStyle=k.guard;c.lineWidth=2;c.beginPath();c.arc(-53,0,17,0,7);c.stroke()}
+if(form===10){c.strokeStyle=k.guard;c.lineWidth=2;c.beginPath();c.moveTo(-78,-7);c.lineTo(-30,-7);c.stroke()}
 c.restore()}
 function drawKnife(x,y,angle,scale=1){cutoRenderSharp(ctx,knifeSkin,x,y,angle,scale)}
 function addCutEffects(a,b){const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;for(let i=0;i<(save.performanceMode?7:25);i++){const t=Math.random(),side=Math.random()<.5?-1:1;effects.push({x:a.x+dx*t,y:a.y+dy*t,vx:nx*side*rand(35,150)+rand(-25,25),vy:ny*side*rand(35,150)+rand(-35,35),life:rand(.16,.43),max:.43,r:rand(1.2,3.5)})}if(effects.length>160)effects.splice(0,effects.length-160)}
