@@ -465,6 +465,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'21.1',title:'Animated Knife Inspection',date:'17 Nov 2026',changes:['Added continuously animated knife inspection previews with weapon-family motion differences','Preserved all fruit and knife IDs, collection unlocks, mastery rewards and gameplay mechanics','Complete bespoke artwork for every collectible and device-wide QA remain outstanding']},
 {version:'21.0',title:'Fruit Silhouette Art Pass',date:'17 Nov 2026',changes:['Added paired silhouette masks for whole and sliced fruit textures, including bananas, pineapples, strawberries, pears, dragon fruits, apples and star-pattern fruits','Added pineapple crown leaves and dragon-fruit scale details to procedural artwork','Preserved original fruit indexes, gameplay collision polygons, collection and saved progress','Further bespoke art, knife animations and full device testing remain pending']},
 {version:'21.0',title:'233 Fruits + 233 Knives and Mastery Rewards',date:'17 Nov 2026',changes:['Added 233 append-only fruit IDs with deterministic exterior and interior texture generation','Added 233 collectible knife IDs across existing sixteen distinct weapon families','Weapon mastery levels now award one-time Cutos per weapon and level','Preserved existing collection IDs, unlocks, prices, saved progress and slicing mechanics','Full hand-authored individual sprites, animation coverage and live visual QA remain outstanding']},
 {version:'21.0',title:'750 Item Collection Expansion',date:'17 Nov 2026',changes:['Added 250 collectible fruit entries, appended without shifting existing fruit indexes','Added 250 themed blade entries with existing family silhouettes and variant details','Added 250 purchasable powers using existing tested ability families and rank effects','Preserved existing prices, currencies, inventories, physics and save keys','Full bespoke 2D asset and animation overhaul remains unfinished']},
@@ -577,7 +578,9 @@ const owner=ownerPowers.includes(name);const hue=owner?40:210;
 for(let i=4;i>=1;i--){c.strokeStyle='hsla('+hue+',90%,'+(45+i*8)+'%,'+(.2+i*.14)+')';c.lineWidth=7-i;c.beginPath();c.arc(0,0,30+i*34,0,7);c.stroke()}
 c.fillStyle='hsl('+hue+',85%,68%)';c.beginPath();c.arc(0,0,36,0,7);c.fill();c.fillStyle='white';c.font='bold 18px sans-serif';c.textAlign='center';c.fillText(owner?'OWNER POWER':'POWER',0,120);
 }else{
-cutoRenderSharp(c,name,0,0,-.22,2.15)
+const previewStart=performance.now();let previewFrame=0;
+const animatePreview=(now)=>{if(!overlay.isConnected)return;c.clearRect(-300,-160,600,330);const t=(now-previewStart)/1000;const butterfly=/Butterfly Knife/i.test(name),karambit=/Karambit/i.test(name);const spin=karambit?t*.85:Math.sin(t*.85)*.14;const flip=butterfly?Math.sin(t*2.5)*.32:0;cutoRenderSharp(c,name,0,0,-.22+spin+flip,2.15);previewFrame=requestAnimationFrame(animatePreview)};
+requestAnimationFrame(animatePreview);
 }
 const info=document.createElement('small');info.style.cssText='opacity:.8';info.textContent=type==='power'?'Ability visual preview':type==='plate'?'Plate appearance preview • '+(plateCapacity[name]||2)+' slots':'Knife appearance preview';
 const close=document.createElement('button');close.textContent='Close preview';close.onclick=()=>overlay.remove();
