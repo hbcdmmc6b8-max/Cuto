@@ -465,6 +465,7 @@ menuButton('↻ Sync and refresh',refresh);
 menuButton('✏️ Change nickname',()=>{const input=document.createElement('input');input.maxLength=20;input.placeholder='New nickname';content.prepend(input);menuButton('Save nickname',()=>{const next=input.value.trim().replace(/[<>]/g,'').slice(0,20);if(!next)return;localStorage.setItem(playerNameKey,next);leaderboard()});input.focus()});
 refresh()}
 const cutoReleaseNotes=[
+{version:'21.3',title:'Black Hole: The Singularity',date:'18 Nov 2026',changes:['Expanded Black Hole Week into a seven-phase event with six cumulative slicing missions and claimable rewards','Added persistent Stardust earned counter and progress bars in a redesigned event hub','Upgraded the vortex with animated accretion rings, orbiting stars, nebula glow and daily visual escalation','Event cuts are counted through existing weapon mastery slice events without modifying hitboxes or slicing physics','Preserved original daily claims, save data, progression and inventory; performance mode disables cosmic rendering']},
 {version:'21.2',title:'Black Hole Week',date:'17 Nov 2026',changes:['Added seven-day Black Hole event from November 17 through November 24 UTC','Animated cosmic vortex appears during gameplay without modifying collision or slicing physics','Seven daily claimable Cutos supply drops with saved claim history and duplicate protection','Added event countdown and event hub to main menu; performance mode skips vortex rendering','Preserved player saves, currencies, collections and existing content']},
 {version:'21.1',title:'Animated Knife Inspection',date:'17 Nov 2026',changes:['Added continuously animated knife inspection previews with weapon-family motion differences','Preserved all fruit and knife IDs, collection unlocks, mastery rewards and gameplay mechanics','Complete bespoke artwork for every collectible and device-wide QA remain outstanding']},
 {version:'21.0',title:'Fruit Silhouette Art Pass',date:'17 Nov 2026',changes:['Added paired silhouette masks for whole and sliced fruit textures, including bananas, pineapples, strawberries, pears, dragon fruits, apples and star-pattern fruits','Added pineapple crown leaves and dragon-fruit scale details to procedural artwork','Preserved original fruit indexes, gameplay collision polygons, collection and saved progress','Further bespoke art, knife animations and full device testing remain pending']},
@@ -562,26 +563,53 @@ const cutoBlackHoleStart=Date.parse('2026-11-17T00:00:00Z');
 const cutoBlackHoleEnd=cutoBlackHoleStart+7*86400000;
 function cutoBlackHoleActive(){return Date.now()>=cutoBlackHoleStart&&Date.now()<cutoBlackHoleEnd}
 function cutoBlackHoleTime(){const ms=Math.max(0,cutoBlackHoleEnd-Date.now());return Math.floor(ms/86400000)+'d '+Math.floor(ms%86400000/3600000)+'h '+Math.floor(ms%3600000/60000)+'m'}
+const cutoBlackHoleMissions=[
+{id:'first',name:'First Contact',target:10,reward:300},
+{id:'orbit',name:'Orbital Cutter',target:40,reward:600},
+{id:'gravity',name:'Gravity Breaker',target:100,reward:1000},
+{id:'horizon',name:'Event Horizon',target:250,reward:1600},
+{id:'singularity',name:'Singularity Slayer',target:500,reward:2500},
+{id:'cosmos',name:'Cosmic Legend',target:1000,reward:4000}
+];
+function cutoBlackHoleState(){if(!save.blackHoleEvent||typeof save.blackHoleEvent!=='object')save.blackHoleEvent={cuts:0,claimed:[],stardust:0};const e=save.blackHoleEvent;if(!Array.isArray(e.claimed))e.claimed=[];e.cuts=Math.max(0,Number(e.cuts)||0);e.stardust=Math.max(0,Number(e.stardust)||0);return e}
+function cutoBlackHoleCut(hits){if(!cutoBlackHoleActive()||hits<=0)return;const e=cutoBlackHoleState();e.cuts+=hits;e.stardust+=hits*3;saveProgress();if(cutoBlackHoleMissions.some(m=>e.cuts>=m.target&&!e.claimed.includes(m.id)))announce('Black Hole mission ready! Open the event hub.')}
 function cutoBlackHoleMenu(){
-menu('BLACK HOLE • Seven-Day Event');
-menuText('November 17–24, 2026 (UTC). A cosmic anomaly appears above your cutting board. The event does not alter fruit physics or collision.');
-if(!cutoBlackHoleActive()){menuText(Date.now()<cutoBlackHoleStart?'Event begins November 17 UTC.':'Event ended. Earned rewards remain in your save.');menuButton('← Back',mainMenu);return}
-menuText('Time remaining: '+cutoBlackHoleTime());
-const day=Math.floor((Date.now()-cutoBlackHoleStart)/86400000)+1;
+menu('BLACK HOLE • THE SINGULARITY');
+menuText('NOV 17–24 • Seven days of cosmic chaos • '+(cutoBlackHoleActive()?'LIVE • '+cutoBlackHoleTime()+' remaining':'Event archive'));
+const e=cutoBlackHoleState(),active=cutoBlackHoleActive();
+const banner=document.createElement('div');banner.style.cssText='border:1px solid #9366f7;border-radius:18px;padding:18px;background:radial-gradient(circle at 80% 40%,#7838b950,transparent 55%),linear-gradient(130deg,#130d2e,#29134b);color:#f4eaff;box-shadow:inset 0 0 30px #8742cb26';
+banner.innerHTML='<div style="font-size:26px;font-weight:900;letter-spacing:2px">◉ THE SINGULARITY</div><p style="font-size:13px;opacity:.9">THE VOID IS WATCHING • SEVEN DAYS • SIX MISSIONS</p>';content.appendChild(banner);
+menuText('Event progress: '+e.cuts.toLocaleString()+' cuts • '+e.stardust.toLocaleString()+' Stardust earned');
+if(!active){menuText(Date.now()<cutoBlackHoleStart?'Event has not started.':'The singularity has closed. All claimed rewards remain yours.');menuButton('← Back',mainMenu);return}
+const day=Math.min(7,Math.floor((Date.now()-cutoBlackHoleStart)/86400000)+1);
+menuText('PHASE '+day+'/7 • '+['','The Arrival','Orbital Storm','Gravitational Surge','Dark Matter','The Rift','Event Horizon','Final Singularity'][day]);
 save.blackHoleClaimedDays=Array.isArray(save.blackHoleClaimedDays)?save.blackHoleClaimedDays:[];
-menuText('Day '+day+' / 7 • Cosmic supply drop: '+(200+day*100)+' Cutos');
-if(save.blackHoleClaimedDays.includes(day))menuText('Today’s supply drop already claimed.');
-else menuButton('Claim Day '+day+' Cosmic Supply Drop',()=>{if(!cutoBlackHoleActive())return cutoBlackHoleMenu();save.blackHoleClaimedDays=Array.isArray(save.blackHoleClaimedDays)?save.blackHoleClaimedDays:[];if(save.blackHoleClaimedDays.includes(day))return cutoBlackHoleMenu();save.blackHoleClaimedDays.push(day);if(!save.ownerMode)save.cutos=(Number(save.cutos)||0)+200+day*100;saveProgress();walletUpdate();announce('Cosmic supply drop claimed!');cutoBlackHoleMenu()});
-menuText('Claim one drop each UTC day. Cosmic vortex visuals appear in gameplay during the event.');
+menuText('Daily cosmic supply: '+(200+day*100)+' Cutos');
+if(save.blackHoleClaimedDays.includes(day))menuText('✓ Today’s supply claimed');
+else menuButton('Claim Day '+day+' Supply Drop',()=>{if(!cutoBlackHoleActive())return cutoBlackHoleMenu();const current=Math.floor((Date.now()-cutoBlackHoleStart)/86400000)+1;if(current!==day||save.blackHoleClaimedDays.includes(day))return cutoBlackHoleMenu();save.blackHoleClaimedDays.push(day);if(!save.ownerMode)save.cutos=(Number(save.cutos)||0)+200+day*100;saveProgress();walletUpdate();announce('Cosmic supply claimed');cutoBlackHoleMenu()});
+sectionLabel('SINGULARITY MISSION TRACK');
+for(const mission of cutoBlackHoleMissions){
+const done=e.claimed.includes(mission.id),ready=e.cuts>=mission.target;
+const row=document.createElement('div');row.style.cssText='border:1px solid #78569a70;border-radius:12px;padding:11px;margin:5px 0;background:#20162f';
+const title=document.createElement('strong');title.textContent=mission.name+' • '+Math.min(e.cuts,mission.target)+'/'+mission.target+' cuts';row.appendChild(title);
+const progress=document.createElement('div');progress.style.cssText='height:7px;background:#120c21;border-radius:9px;overflow:hidden;margin:8px 0';
+const fill=document.createElement('div');fill.style.cssText='height:100%;width:'+Math.min(100,e.cuts/mission.target*100)+'%;background:linear-gradient(90deg,#7547df,#ee91ff)';progress.appendChild(fill);row.appendChild(progress);
+const label=document.createElement('small');label.textContent=done?'✓ Claimed':mission.reward.toLocaleString()+' Cutos';row.appendChild(label);content.appendChild(row);
+if(ready&&!done)menuButton('Claim '+mission.name+' • '+mission.reward+' Cutos',()=>{if(!cutoBlackHoleActive())return cutoBlackHoleMenu();const state=cutoBlackHoleState();if(state.cuts<mission.target||state.claimed.includes(mission.id))return cutoBlackHoleMenu();state.claimed.push(mission.id);if(!save.ownerMode)save.cutos=(Number(save.cutos)||0)+mission.reward;saveProgress();walletUpdate();announce('Mission complete: '+mission.name);cutoBlackHoleMenu()})}
+sectionLabel('COSMIC EFFECTS');
+menuText('The singularity grows stronger each day: swirling accretion rings, starfields, orbiting debris and pulsing cosmic light. The effect is decorative and does not change hitboxes.');
+menuButton('Play • Slice for Missions',()=>{panel.hidden=true});
 menuButton('← Back',mainMenu)}
 function cutoBlackHoleVisual(){
 if(!cutoBlackHoleActive()||save.performanceMode)return;
-const x=W*.83,y=H*.19,r=Math.max(24,Math.min(W,H)*.07),t=Date.now()*.0004;
-ctx.save();ctx.globalAlpha=.75;
-const glow=ctx.createRadialGradient(x,y,r*.35,x,y,r*2.1);glow.addColorStop(0,'#060310');glow.addColorStop(.45,'#201149c8');glow.addColorStop(.7,'#9d64e540');glow.addColorStop(1,'#b27cff00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*2.1,0,7);ctx.fill();
-ctx.translate(x,y);ctx.rotate(t);ctx.scale(1,.52);
-for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(0,0,r*(1.22+i*.18),r*(1.22+i*.18),0,i*.65,Math.PI*1.65+i*.65);ctx.strokeStyle=['#e9a6ff','#8f70ff','#70dcff'][i];ctx.lineWidth=3-i*.55;ctx.stroke()}
-ctx.scale(1,1/.52);ctx.fillStyle='#03020a';ctx.beginPath();ctx.arc(0,0,r*.82,0,7);ctx.fill();ctx.strokeStyle='#c59aff';ctx.lineWidth=1.5;ctx.stroke();ctx.restore()}
+const day=Math.min(7,Math.floor((Date.now()-cutoBlackHoleStart)/86400000)+1);
+const x=W*.79,y=H*.20,r=Math.max(25,Math.min(W,H)*(.065+day*.004)),t=performance.now()*.0003;
+ctx.save();ctx.globalAlpha=.85;
+const nebula=ctx.createRadialGradient(x,y,0,x,y,r*4);nebula.addColorStop(0,'#110821');nebula.addColorStop(.24,'#45208099');nebula.addColorStop(.56,'#482a8c28');nebula.addColorStop(1,'#21103400');ctx.fillStyle=nebula;ctx.fillRect(x-r*4,y-r*4,r*8,r*8);
+for(let i=0;i<30+day*5;i++){const phase=i*2.39996+t*(.12+(i%4)*.07),dist=r*(1.5+(i%11)*.27),sx=x+Math.cos(phase)*dist,sy=y+Math.sin(phase)*dist*.65;ctx.globalAlpha=.18+(i%5)*.11;ctx.fillStyle=i%3?'#e9c9ff':'#78deff';ctx.beginPath();ctx.arc(sx,sy,1+(i%3)*.55,0,7);ctx.fill()}
+ctx.globalAlpha=.95;ctx.translate(x,y);ctx.rotate(t);ctx.scale(1,.58);
+for(let i=0;i<6;i++){ctx.beginPath();ctx.ellipse(0,0,r*(1.1+i*.16),r*(1.1+i*.16),0,i*.75+t*(i%2?1:-1),i*.75+Math.PI*1.6);ctx.strokeStyle=['#f3bbff','#b47cff','#67d7ff','#e76fff','#f9c97c','#6c7eff'][i];ctx.lineWidth=3.2-i*.27;ctx.globalAlpha=.8-i*.075;ctx.stroke()}
+ctx.scale(1,1/.58);ctx.globalAlpha=1;const shadow=ctx.createRadialGradient(0,0,r*.25,0,0,r);shadow.addColorStop(0,'#000000');shadow.addColorStop(.78,'#02020a');shadow.addColorStop(.91,'#643a98');shadow.addColorStop(1,'#dfb5ff');ctx.fillStyle=shadow;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.fill();ctx.restore()}
 
 function mainMenu(){menu('CUTO • Main Menu');const hero=document.createElement('div');hero.className='menuHero';hero.innerHTML='<strong>Slice. Earn. Customize.</strong><p>Keep slicing or explore your collection.</p>';content.appendChild(hero);sectionLabel('Play');menuButton('🕳️ Black Hole • '+(cutoBlackHoleActive()?cutoBlackHoleTime():'Event Archive'),cutoBlackHoleMenu);menuButton('🍎 Fruit Collection',fruitMenu);menuButton('🎮 Game Modes',modesMenu);menuButton('📖 Fruit Encyclopedia',encyclopedia);sectionLabel('Progression');menuButton('🌟 Expansion Hub',expansionMenu);menuButton('⚡ Performance Mode: '+(save.performanceMode?'ON':'OFF'),()=>{save.performanceMode=!save.performanceMode;saveProgress();mainMenu()});menuButton('🛍️ Knife & Plate Shop',shop);menuButton('⚡ Powers',powersMenu);menuButton('🏆 Cut Journal',journal);menuButton('🥇 Leaderboard',leaderboard);menuButton('🎯 Daily Challenge',dailyChallenge);sectionLabel('Preferences');menuButton('⚙️ Settings',()=>{panel.hidden=true;setSettingsOpen(true)});menuButton('🧪 Fruit Destruction Lab',cutoDestructionMenu);menuButton('📷 Photo Mode',()=>{panel.hidden=true;document.body.classList.add('photo')});sectionLabel('About Cuto');menuText('Installed game build: v'+cutoReleaseNotes[0].version);menuButton('↻ Check for Updates',checkCutoUpdates);let seen='';try{seen=localStorage.getItem('cuto-changelog-seen')||''}catch(e){}menuButton('📜 Changelog • v'+cutoReleaseNotes[0].version+(seen===cutoReleaseNotes[0].version?'':' • NEW'),changelogMenu)}
 
@@ -749,7 +777,7 @@ function cutoJuiceUpdate(dt){for(const j of cutoJuice){j.life-=dt;j.vy+=650*dt;j
 function cutoJuiceDraw(){ctx.save();for(const j of cutoJuice){ctx.globalAlpha=Math.min(.75,j.life);ctx.fillStyle=j.color;ctx.beginPath();ctx.ellipse(j.x,j.y,Math.max(.5,j.r),Math.max(.5,j.r*.75),0,0,Math.PI*2);ctx.fill()}ctx.restore()}
 function cutoWeaponMastery(){if(!save.weaponMastery||typeof save.weaponMastery!=='object')save.weaponMastery={};return save.weaponMastery}
 function cutoWeaponLevel(name){return 1+Math.floor(Math.sqrt((cutoWeaponMastery()[name]||0)/8))}
-function cutoAwardWeaponXP(hits){const m=cutoWeaponMastery(),oldLevel=cutoWeaponLevel(knifeSkin);m[knifeSkin]=(m[knifeSkin]||0)+Math.max(1,hits);const level=cutoWeaponLevel(knifeSkin);if(level>oldLevel){save.masteryClaimed=save.masteryClaimed||{};let reward=0;for(let l=oldLevel+1;l<=level;l++){const key=knifeSkin+':'+l;if(!save.masteryClaimed[key]){save.masteryClaimed[key]=true;reward+=20+l*10}}if(reward&&!save.ownerMode){save.cutos=(Number(save.cutos)||0)+reward;walletUpdate()}announce(knifeSkin+' mastery '+level+(reward?' • +'+reward+' Cutos':''));saveProgress()}}
+function cutoAwardWeaponXP(hits){cutoBlackHoleCut(Math.max(1,hits));const m=cutoWeaponMastery(),oldLevel=cutoWeaponLevel(knifeSkin);m[knifeSkin]=(m[knifeSkin]||0)+Math.max(1,hits);const level=cutoWeaponLevel(knifeSkin);if(level>oldLevel){save.masteryClaimed=save.masteryClaimed||{};let reward=0;for(let l=oldLevel+1;l<=level;l++){const key=knifeSkin+':'+l;if(!save.masteryClaimed[key]){save.masteryClaimed[key]=true;reward+=20+l*10}}if(reward&&!save.ownerMode){save.cutos=(Number(save.cutos)||0)+reward;walletUpdate()}announce(knifeSkin+' mastery '+level+(reward?' • +'+reward+' Cutos':''));saveProgress()}}
 function cutoWeaponMasteryMenu(){menu('Weapon Mastery');menuText('Earn mastery XP by slicing or striking fruit. Every new level awards Cutos (20 + 10 × level), once per weapon and level. Higher levels also brighten slicing trails.');const m=cutoWeaponMastery();const entries=Object.entries(m).sort((a,b)=>b[1]-a[1]);for(const [name,xp] of entries.slice(0,70))menuText(name+' • Level '+cutoWeaponLevel(name)+' • '+xp+' XP');if(!entries.length)menuText('Use a knife or blunt weapon to begin.');menuButton('← Back',expansionMenu)}
 function cutoPrecisionChallengeMenu(){menu('Precision Slice Challenges');menuText('Choose a challenge, then use the same fruit without resetting. Each challenge rewards Cutos once per fruit.');for(const [id,label,target] of [['halves','Two equal halves',2],['quarters','Four near-equal quarters',4],['eighths','Eight near-equal pieces',8]])menuButton(label+' • '+target+' pieces',()=>{cutoCutChallenge=id;cutoCutChallengeProgress=target;cutoCutChallengeStarted=0;spawn(false);panel.hidden=true;announce('Challenge: '+label)});menuButton('← Back',expansionMenu)}
 function cutoChallengeCheck(){if(!cutoCutChallenge)return;const target=cutoCutChallengeProgress;const chunks=pieces.filter(p=>p.depth>0&&area(p.poly)>100);if(chunks.length<target)return;if(chunks.length>target){announce('Challenge missed • too many pieces');cutoCutChallenge=null;return}const sizes=chunks.map(p=>area(p.poly)),ratio=Math.min(...sizes)/Math.max(...sizes);if(ratio>=.75){const key='sliceChallenge:'+cutoCutChallenge+':'+fruits[fruitIndex].name;save.questClaims=save.questClaims||{};if(!save.questClaims[key]){save.questClaims[key]=true;const reward=target*25;if(!save.ownerMode)save.cutos+=reward;walletUpdate();announce('Precision challenge cleared! +'+reward+' Cutos')}else announce('Challenge complete • already claimed');}else announce('Challenge missed • aim for equal slices');cutoCutChallenge=null;saveProgress()}
