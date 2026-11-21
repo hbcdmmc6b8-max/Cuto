@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://hbcdmmc6b8-max.github.io/Cuto/sitemap.xml
